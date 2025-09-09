@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Imagens - Ensino Einstein</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* Estilos para o modal personalizado */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            max-width: 400px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl transition-all duration-300 transform hover:shadow-2xl">
+        <h1 class="text-3xl font-bold text-left text-gray-800 mb-2">
+            Gerador de Imagens - Ensino Einstein
+        </h1>
+        <p class="text-left text-gray-600 mb-8">
+            Preencha os campos abaixo com o máximo de detalhes possível para gerar um prompt altamente descritivo e preciso.
+        </p>
+
+        <!-- Formulário de Briefing -->
+        <form id="briefingForm" class="space-y-8">
+            <!-- Seção de Modelos -->
+            <div>
+                <h2 class="text-xl font-bold text-left text-gray-700 mb-4 border-b-2 border-blue-500 pb-2">Modelos Pré-definidos</h2>
+                <div class="flex flex-wrap justify-start gap-2">
+                    <button type="button" id="loadTemplateBrainTumor" class="bg-[#87939d] text-white font-semibold py-2 px-4 rounded-lg hover:bg-[#004f92] transition-colors">
+                        Tomografia de Tumor Cerebral
+                    </button>
+                    <button type="button" id="loadTemplateHeartAnatomy" class="bg-[#87939d] text-white font-semibold py-2 px-4 rounded-lg hover:bg-[#004f92] transition-colors">
+                        Anatomia Detalhada do Coração
+                    </button>
+                    <button type="button" id="loadTemplateChestXRay" class="bg-[#87939d] text-white font-semibold py-2 px-4 rounded-lg hover:bg-[#004f92] transition-colors">
+                        Radiografia do Tórax
+                    </button>
+                    <button type="button" id="loadTemplateMicroscopy" class="bg-[#87939d] text-white font-semibold py-2 px-4 rounded-lg hover:bg-[#004f92] transition-colors">
+                        Microscopia de Célula Sanguínea
+                    </button>
+                </div>
+            </div>
+
+            <!-- Seção 1: Conteúdo Principal da Imagem -->
+            <div>
+                <h2 class="text-xl font-bold text-left text-gray-700 mb-4 border-b-2 border-blue-500 pb-2">Conteúdo Principal</h2>
+                <div class="space-y-4">
+                    <!-- Campo: Anatomia ou Estrutura -->
+                    <div>
+                        <label for="anatomia" class="block text-sm font-medium text-gray-700 mb-1">
+                            Anatomia ou Estrutura Central <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="anatomia" name="anatomia" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Ex: Coração humano, Célula neural, Ossos do crânio.">
+                    </div>
+
+                    <!-- Campo: Condição / Patologia (Opcional) -->
+                    <div>
+                        <label for="patologia" class="block text-sm font-medium text-gray-700 mb-1">
+                            Condição ou Patologia (Opcional)
+                        </label>
+                        <input type="text" id="patologia" name="patologia" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Ex: Cardiomiopatia hipertrófica, Tumor cerebral, Fratura no fêmur.">
+                    </div>
+
+                    <!-- Campo: Detalhes Adicionais -->
+                    <div>
+                        <label for="detalhesAdicionais" class="block text-sm font-medium text-gray-700 mb-1">
+                            Detalhes Adicionais do Conteúdo (Opcional)
+                        </label>
+                        <textarea id="detalhesAdicionais" name="detalhesAdicionais" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Ex: Com artérias e veias destacadas, em diferentes estágios de crescimento, mostrando inflamação."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção 2: Perspectiva e Tipo de Imagem -->
+            <div>
+                <h2 class="text-xl font-bold text-left text-gray-700 mb-4 border-b-2 border-blue-500 pb-2">Perspectiva e Tipo de Imagem</h2>
+                <div class="space-y-4">
+                    <!-- Campo: Tipo de Imagem (Radiografia, Micrografia, etc.) -->
+                    <div>
+                        <label for="tipoImagem" class="block text-sm font-medium text-gray-700 mb-1">
+                            Tipo de Imagem <span class="text-red-500">*</span>
+                        </label>
+                        <select id="tipoImagem" name="tipoImagem" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            <option value="">Selecione...</option>
+                            <option value="Fotografia de alta resolução">Fotografia de Alta Resolução</option>
+                            <option value="Ilustração científica">Ilustração Científica</option>
+                            <option value="Radiografia (Raio-X)">Radiografia (Raio-X)</option>
+                            <option value="Tomografia Computadorizada (CT)">Tomografia Computadorizada (CT)</option>
+                            <option value="Ressonância Magnética (RM)">Ressonância Magnética (RM)</option>
+                            <option value="Ultrassonografia">Ultrassonografia</option>
+                            <option value="Microscopia Eletrônica">Microscopia Eletrônica</option>
+                            <option value="Microscopia Óptica">Microscopia Óptica</option>
+                            <option value="Animação 3D">Animação 3D</option>
+                            <option value="Outra">Outra</option>
+                        </select>
+                    </div>
+                    <!-- Nova caixa de texto para "Outro Tipo de Imagem" -->
+                    <div id="otherImageTypeContainer" class="hidden">
+                        <label for="otherImageTypeInput" class="block text-sm font-medium text-gray-700 mb-1">
+                            Especifique o tipo de imagem
+                        </label>
+                        <input type="text" id="otherImageTypeInput" name="otherImageType" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Ex: Fotomicrografia confocal, Gráfico vetorial.">
+                    </div>
+
+                    <!-- Campo: Ângulo / Perspectiva -->
+                    <div>
+                        <label for="perspectiva" class="block text-sm font-medium text-gray-700 mb-1">
+                            Ângulo ou Perspectiva (Opcional)
+                        </label>
+                        <input type="text" id="perspectiva" name="perspectiva" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Ex: Vista superior, Corte transversal, Close-up.">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção 3: Estilo Visual e Técnico -->
+            <div>
+                <h2 class="text-xl font-bold text-left text-gray-700 mb-4 border-b-2 border-blue-500 pb-2">Estilo Visual e Técnico</h2>
+                <div class="space-y-4">
+                    <!-- Campo: Estilo de Renderização -->
+                    <div>
+                        <label for="estilo" class="block text-sm font-medium text-gray-700 mb-1">
+                            Estilo Visual e Técnico (Opcional)
+                        </label>
+                        <select id="estilo" name="estilo" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            <option value="">Selecione...</option>
+                            <option value="Renderização 3D Fotorrealista">Renderização 3D Fotorrealista</option>
+                            <option value="Ilustração Científica">Ilustração Científica</option>
+                            <option value="Diagrama Esquemático">Diagrama Esquemático</option>
+                            <option value="Arte de Voxel">Arte de Voxel</option>
+                            <option value="Gráfico Vetorial">Gráfico Vetorial</option>
+                            <option value="Microscopia de Luz">Microscopia de Luz</option>
+                            <option value="Infográfico">Infográfico</option>
+                            <option value="Esquema de Cores Específico">Esquema de Cores Específico</option>
+                            <option value="Outra">Outra</option>
+                        </select>
+                    </div>
+                    <!-- Nova caixa de texto para "Outro Estilo Visual" -->
+                    <div id="otherStyleTypeContainer" class="hidden">
+                        <label for="otherStyleTypeInput" class="block text-sm font-medium text-gray-700 mb-1">
+                            Especifique o estilo visual
+                        </label>
+                        <input type="text" id="otherStyleTypeInput" name="otherStyleType" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Ex: Estilo de pintura a óleo, estilo de desenho animado, etc.">
+                    </div>
+
+                    <!-- Campo: Iluminação e Cor -->
+                    <div>
+                        <label for="iluminacao" class="block text-sm font-medium text-gray-700 mb-1">
+                            Iluminação e Esquema de Cores (Opcional)
+                        </label>
+                        <input type="text" id="iluminacao" name="iluminacao" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Ex: Iluminação suave, tons de azul e cinza, cores vivas.">
+                    </div>
+
+                    <!-- Novo Campo: Nível de Detalhe -->
+                    <div>
+                        <label for="nivelDetalhe" class="block text-sm font-medium text-gray-700 mb-1">
+                            Nível de Detalhe
+                        </label>
+                        <select id="nivelDetalhe" name="nivelDetalhe" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            <option value="Normal" selected>Normal</option>
+                            <option value="Ultra Detalhado">Ultra Detalhado (Máximo Realismo)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção 4: Elementos Adicionais e Exclusão -->
+            <div>
+                <h2 class="text-xl font-bold text-left text-gray-700 mb-4 border-b-2 border-blue-500 pb-2">Elementos Adicionais</h2>
+                <div class="space-y-4">
+                    <!-- Campo: Texto na Imagem -->
+                    <div>
+                        <label for="textoImagem" class="block text-sm font-medium text-gray-700 mb-1">
+                            Texto na Imagem (Opcional)
+                        </label>
+                        <input type="text" id="textoImagem" name="textoImagem" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Ex: Aorta, Fêmur, Câncer de Mama.">
+                        <label for="posicaoTexto" class="block text-sm font-medium text-gray-700 mt-2 mb-1">
+                            Posição do Texto
+                        </label>
+                        <select id="posicaoTexto" name="posicaoTexto" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            <option value="" selected>Nenhuma</option>
+                            <option value="canto superior esquerdo">Canto Superior Esquerdo</option>
+                            <option value="canto superior direito">Canto Superior Direito</option>
+                            <option value="centro">Centro</option>
+                            <option value="canto inferior esquerdo">Canto Inferior Esquerdo</option>
+                            <option value="canto inferior direito">Canto Inferior Direito</option>
+                        </select>
+                    </div>
+                    <!-- Campo: Prompt Negativo -->
+                    <div>
+                        <label for="promptNegativo" class="block text-sm font-medium text-gray-700 mb-1">
+                            O que evitar na imagem (Prompt Negativo)
+                        </label>
+                        <textarea id="promptNegativo" name="promptNegativo" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Ex: texto ilegível, artefatos, fundo poluído, cores distorcidas."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção 5: Imagem de Referência -->
+            <div>
+                <h2 class="text-xl font-bold text-left text-gray-700 mb-4 border-b-2 border-blue-500 pb-2">Imagem de Referência (Opcional)</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label for="imagemReferencia" class="block text-sm font-medium text-gray-700 mb-1">
+                            Anexar Imagem de Referência (Opcional)
+                        </label>
+                        <input type="file" id="imagemReferencia" name="imagemReferencia" accept="image/*" class="w-full text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div id="image-preview" class="hidden w-full h-48 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden relative">
+                        <img id="preview-img" src="#" alt="Pré-visualização da imagem" class="w-full h-full object-contain">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botão de Gerar Prompt -->
+            <div class="flex justify-start mt-8">
+                <button type="button" id="generatePromptBtn" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 disabled:bg-blue-400">
+                    Gerar Prompt
+                </button>
+            </div>
+            
+            <!-- Indicador de Carregamento -->
+            <div id="loadingIndicator" class="hidden text-left text-gray-500 mt-4">
+                <svg class="animate-spin h-5 w-5 mr-3 inline text-blue-500" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Gerando prompt...
+            </div>
+        </form>
+
+        <!-- Seção de Saída do Prompt -->
+        <div id="promptOutputSection" class="mt-8 hidden">
+            <h2 class="text-xl font-bold text-left text-gray-800 mb-3">Prompt Gerado</h2>
+            <div class="relative">
+                <textarea id="generatedPrompt" readonly rows="10" class="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-800 resize-none leading-relaxed text-sm"></textarea>
+            </div>
+            <div class="flex space-x-4 mt-4">
+                <button id="copyPromptBtn" class="flex-1 bg-blue-900 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-800 focus:outline-none transition-all duration-300" style="background-color: #004f92;">
+                    Copiar Prompt
+                </button>
+                <button type="button" id="savePromptBtn" class="flex-1 bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-300">
+                    Salvar Prompt
+                </button>
+            </div>
+            <p id="copyMessage" class="text-center text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full opacity-0 transition-opacity duration-300 mt-2"></p>
+        </div>
+        
+        <!-- Histórico de Prompts Salvos -->
+        <div id="historySection" class="mt-8">
+            <h2 class="text-xl font-bold text-left text-gray-700 mb-4 border-b-2 border-blue-500 pb-2">Histórico de Prompts Salvos</h2>
+            <div id="promptsList" class="space-y-4">
+                <p class="text-left text-gray-500" id="noPromptsMessage">Nenhum prompt salvo ainda.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para mensagens de erro/aviso -->
+    <div id="customAlertModal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Atenção!</h3>
+            <p id="customAlertMessage" class="text-sm text-gray-600 mb-4">Por favor, preencha os campos obrigatórios.</p>
+            <button id="closeModalBtn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none">
+                OK
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Referências aos elementos do DOM
+        const briefingForm = document.getElementById('briefingForm');
+        const anatomiaInput = document.getElementById('anatomia');
+        const patologiaInput = document.getElementById('patologia');
+        const detalhesAdicionaisInput = document.getElementById('detalhesAdicionais');
+        const tipoImagemSelect = document.getElementById('tipoImagem');
+        const otherImageTypeContainer = document.getElementById('otherImageTypeContainer');
+        const otherImageTypeInput = document.getElementById('otherImageTypeInput');
+        const perspectivaInput = document.getElementById('perspectiva');
+        const estiloSelect = document.getElementById('estilo');
+        const otherStyleTypeContainer = document.getElementById('otherStyleTypeContainer');
+        const otherStyleTypeInput = document.getElementById('otherStyleTypeInput');
+        const iluminacaoInput = document.getElementById('iluminacao');
+        const nivelDetalheInput = document.getElementById('nivelDetalhe');
+        const textoImagemInput = document.getElementById('textoImagem');
+        const posicaoTextoSelect = document.getElementById('posicaoTexto');
+        const promptNegativoInput = document.getElementById('promptNegativo');
+        const generatePromptBtn = document.getElementById('generatePromptBtn');
+        const promptOutputSection = document.getElementById('promptOutputSection');
+        const generatedPromptTextarea = document.getElementById('generatedPrompt');
+        const copyPromptBtn = document.getElementById('copyPromptBtn');
+        const copyMessage = document.getElementById('copyMessage');
+        const imagemReferenciaInput = document.getElementById('imagemReferencia');
+        const imagePreviewContainer = document.getElementById('image-preview');
+        const previewImg = document.getElementById('preview-img');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const customAlertModal = document.getElementById('customAlertModal');
+        const customAlertMessage = document.getElementById('customAlertMessage');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const savePromptBtn = document.getElementById('savePromptBtn');
+        const promptsList = document.getElementById('promptsList');
+        const noPromptsMessage = document.getElementById('noPromptsMessage');
+        const loadTemplateBrainTumorBtn = document.getElementById('loadTemplateBrainTumor');
+        const loadTemplateHeartAnatomyBtn = document.getElementById('loadTemplateHeartAnatomy');
+        const loadTemplateChestXRayBtn = document.getElementById('loadTemplateChestXRay');
+        const loadTemplateMicroscopyBtn = document.getElementById('loadTemplateMicroscopy');
+
+        let imageBase64Data = null; // Armazena a imagem em Base64
+
+        // Dados dos modelos pré-definidos
+        const templates = {
+            'brainTumor': {
+                anatomia: 'Cérebro humano',
+                patologia: 'tumor cerebral maligno',
+                detalhesAdicionais: 'destacado em cores fluorescentes sobre o tecido circundante',
+                tipoImagem: 'Ressonância Magnética (RM)',
+                perspectiva: 'vista sagital',
+                estilo: 'Diagrama Esquemático',
+                iluminacao: 'iluminação plana, sem brilho',
+                nivelDetalhe: 'Ultra Detalhado',
+                textoImagem: 'Tumor Cerebral',
+                posicaoTexto: 'canto superior esquerdo',
+                promptNegativo: 'artefatos, texto ilegível, fundo poluído'
+            },
+            'heartAnatomy': {
+                anatomia: 'Coração humano',
+                patologia: '',
+                detalhesAdicionais: 'detalhado com artérias e veias em um fundo escuro',
+                tipoImagem: 'Ilustração científica',
+                perspectiva: 'vista frontal',
+                estilo: 'Ilustração Científica',
+                iluminacao: 'iluminação suave, sombras sutis',
+                nivelDetalhe: 'Ultra Detalhado',
+                textoImagem: '',
+                posicaoTexto: '',
+                promptNegativo: 'texto, números, bordas, artefatos'
+            },
+            'chestXRay': {
+                anatomia: 'Pulmões e costelas',
+                patologia: 'pneumonia',
+                detalhesAdicionais: 'com opacidades indicando consolidação',
+                tipoImagem: 'Radiografia (Raio-X)',
+                perspectiva: 'vista posteroanterior',
+                estilo: 'Ilustração Científica', // Estilo de Renderização para Raio-X
+                iluminacao: 'iluminação de Raio-X',
+                nivelDetalhe: 'Normal',
+                textoImagem: 'Pneumonia',
+                posicaoTexto: 'canto inferior direito',
+                promptNegativo: 'cores, artefatos, texto ilegível'
+            },
+            'microscopy': {
+                anatomia: 'Célula sanguínea',
+                patologia: '',
+                detalhesAdicionais: 'em um esfregaço de sangue, mostrando hemácias e leucócitos',
+                tipoImagem: 'Microscopia Óptica',
+                perspectiva: 'close-up',
+                estilo: 'Microscopia de Luz',
+                iluminacao: 'iluminação por microscópio, luz transmitida.',
+                nivelDetalhe: 'Ultra Detalhado',
+                textoImagem: '',
+                posicaoTexto: '',
+                promptNegativo: 'fundo escuro, artefatos, texto'
+            }
+        };
+
+        // Função para mostrar o modal
+        function showAlert(message) {
+            customAlertMessage.textContent = message;
+            customAlertModal.style.display = 'flex';
+        }
+
+        // Listener para fechar o modal
+        closeModalBtn.addEventListener('click', () => {
+            customAlertModal.style.display = 'none';
+        });
+
+        // Função para preencher o formulário com dados de um modelo
+        function loadTemplate(template) {
+            anatomiaInput.value = template.anatomia || '';
+            patologiaInput.value = template.patologia || '';
+            detalhesAdicionaisInput.value = template.detalhesAdicionais || '';
+            tipoImagemSelect.value = template.tipoImagem || '';
+            perspectivaInput.value = template.perspectiva || '';
+            estiloSelect.value = template.estilo || '';
+            iluminacaoInput.value = template.iluminacao || '';
+            nivelDetalheInput.value = template.nivelDetalhe || 'Normal';
+            textoImagemInput.value = template.textoImagem || '';
+            posicaoTextoSelect.value = template.posicaoTexto || '';
+            promptNegativoInput.value = template.promptNegativo || '';
+            
+            // Disparar eventos de mudança para atualizar placeholders e campos dinâmicos
+            tipoImagemSelect.dispatchEvent(new Event('change'));
+            estiloSelect.dispatchEvent(new Event('change'));
+        }
+
+        // Listener para pré-visualizar a imagem e convertê-la para Base64
+        imagemReferenciaInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const dataUrl = e.target.result;
+                    previewImg.src = dataUrl;
+                    imagePreviewContainer.classList.remove('hidden');
+                    imageBase64Data = dataUrl.split(',')[1];
+                };
+                reader.readAsDataURL(file);
+            } else {
+                imagePreviewContainer.classList.add('hidden');
+                imageBase64Data = null;
+            }
+        });
+
+        // Listener para os botões de modelo
+        loadTemplateBrainTumorBtn.addEventListener('click', () => loadTemplate(templates.brainTumor));
+        loadTemplateHeartAnatomyBtn.addEventListener('click', () => loadTemplate(templates.heartAnatomy));
+        loadTemplateChestXRayBtn.addEventListener('click', () => loadTemplate(templates.chestXRay));
+        loadTemplateMicroscopyBtn.addEventListener('click', () => loadTemplate(templates.microscopy));
+
+        // Listener para mostrar/esconder o campo "Outra" para o Tipo de Imagem
+        tipoImagemSelect.addEventListener('change', (event) => {
+            const selectedType = event.target.value;
+            if (selectedType === 'Outra') {
+                otherImageTypeContainer.classList.remove('hidden');
+            } else {
+                otherImageTypeContainer.classList.add('hidden');
+                otherImageTypeInput.value = '';
+            }
+        });
+
+        // Listener para mostrar/esconder o campo "Outro" para o Estilo Visual
+        estiloSelect.addEventListener('change', (event) => {
+            const selectedStyle = event.target.value;
+            if (selectedStyle === 'Outra') {
+                otherStyleTypeContainer.classList.remove('hidden');
+            } else {
+                otherStyleTypeContainer.classList.add('hidden');
+                otherStyleTypeInput.value = '';
+            }
+        });
+        
+        // Função para salvar o prompt no localStorage
+        const savePrompt = (prompt) => {
+            const prompts = JSON.parse(localStorage.getItem('savedPrompts')) || [];
+            const timestamp = new Date().toLocaleString();
+            const newPrompt = { id: Date.now(), prompt: prompt, timestamp: timestamp };
+            prompts.push(newPrompt);
+            localStorage.setItem('savedPrompts', JSON.stringify(prompts));
+            renderPrompts();
+            showAlert("Prompt salvo com sucesso!");
+        };
+
+        // Função para carregar um prompt do localStorage
+        const loadPrompt = (id) => {
+            const prompts = JSON.parse(localStorage.getItem('savedPrompts')) || [];
+            const promptToLoad = prompts.find(p => p.id === id);
+            if (promptToLoad) {
+                generatedPromptTextarea.value = promptToLoad.prompt;
+                promptOutputSection.classList.remove('hidden');
+                showAlert("Prompt carregado com sucesso!");
+            }
+        };
+
+        // Função para deletar um prompt do localStorage
+        const deletePrompt = (id) => {
+            let prompts = JSON.parse(localStorage.getItem('savedPrompts')) || [];
+            prompts = prompts.filter(p => p.id !== id);
+            localStorage.setItem('savedPrompts', JSON.stringify(prompts));
+            renderPrompts();
+            showAlert("Prompt deletado com sucesso!");
+        };
+
+        // Função para renderizar a lista de prompts salvos
+        const renderPrompts = () => {
+            const prompts = JSON.parse(localStorage.getItem('savedPrompts')) || [];
+            promptsList.innerHTML = '';
+            if (prompts.length === 0) {
+                noPromptsMessage.classList.remove('hidden');
+                return;
+            } else {
+                noPromptsMessage.classList.add('hidden');
+            }
+
+            prompts.reverse().forEach(p => {
+                const promptElement = document.createElement('div');
+                promptElement.className = 'p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-200 transition-colors hover:bg-gray-100 flex justify-between items-center';
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'flex-1 pr-4';
+
+                const promptText = document.createElement('p');
+                promptText.className = 'text-sm text-gray-800 break-words';
+                promptText.textContent = p.prompt.substring(0, 100) + (p.prompt.length > 100 ? '...' : '');
+
+                const dateElement = document.createElement('p');
+                dateElement.className = 'text-xs text-gray-500 mt-1';
+                dateElement.textContent = `Salvo em: ${p.timestamp}`;
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'flex space-x-2 flex-shrink-0';
+
+                const loadButton = document.createElement('button');
+                loadButton.textContent = 'Carregar';
+                loadButton.className = 'px-3 py-1 text-xs font-semibold rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors';
+                loadButton.onclick = () => loadPrompt(p.id);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Deletar';
+                deleteButton.className = 'px-3 py-1 text-xs font-semibold rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors';
+                deleteButton.onclick = () => {
+                    if (confirm("Tem certeza que deseja deletar este prompt?")) {
+                        deletePrompt(p.id);
+                    }
+                };
+
+                contentDiv.appendChild(promptText);
+                contentDiv.appendChild(dateElement);
+                actionsDiv.appendChild(loadButton);
+                actionsDiv.appendChild(deleteButton);
+                promptElement.appendChild(contentDiv);
+                promptElement.appendChild(actionsDiv);
+                promptsList.appendChild(promptElement);
+            });
+        };
+
+        // Adiciona um listener para o botão de gerar prompt
+        generatePromptBtn.addEventListener('click', () => {
+            if (!anatomiaInput.value || !tipoImagemSelect.value) {
+                showAlert('Por favor, preencha os campos obrigatórios.');
+                return;
+            }
+
+            loadingIndicator.classList.remove('hidden');
+            generatePromptBtn.disabled = true;
+
+            const anatomia = anatomiaInput.value;
+            const patologia = patologiaInput.value ? `, ${patologiaInput.value}` : '';
+            const detalhesAdicionais = detalhesAdicionaisInput.value ? `, ${detalhesAdicionaisInput.value}` : '';
+            
+            // Obtém o tipo de imagem correto
+            const tipoImagem = tipoImagemSelect.value === 'Outra' ? otherImageTypeInput.value : tipoImagemSelect.value;
+            if (!tipoImagem) {
+                showAlert('Por favor, especifique o tipo de imagem.');
+                loadingIndicator.classList.add('hidden');
+                generatePromptBtn.disabled = false;
+                return;
+            }
+
+            const perspectiva = perspectivaInput.value ? `, ${perspectivaInput.value}` : '';
+            const estilo = estiloSelect.value === 'Outra' ? otherStyleTypeInput.value : estiloSelect.value;
+            const iluminacao = iluminacaoInput.value ? `, ${iluminacaoInput.value}` : '';
+            const nivelDetalhe = nivelDetalheInput.value;
+            const textoImagem = textoImagemInput.value;
+            const posicaoTexto = posicaoTextoSelect.value;
+            const promptNegativo = promptNegativoInput.value ? `, --ar ${promptNegativoInput.value}` : '';
+            
+            // Valores fixos
+            const resolucao = '8K';
+            const proporcao = '1:1';
+            const formato = 'PNG';
+            const fundo = 'fundo transparente';
+            let cameraPrompt = ', capturado com lente 200mm f/2.8';
+            let detalhePrompt = '';
+            let textoPrompt = '';
+
+            if (nivelDetalhe === 'Ultra Detalhado') {
+                detalhePrompt = ' com detalhes hiper-realistas, anatomia precisa, iluminação médica e textura microscópica. ';
+            }
+
+            // Apenas adiciona o texto se a posição não for "Nenhuma" (valor vazio)
+            if (textoImagem && posicaoTexto) {
+                textoPrompt = `, com o texto "${textoImagem}" posicionado no ${posicaoTexto}`;
+            }
+
+            let prompt;
+
+            // Geração de prompt com base nos campos de texto
+            prompt = `Uma imagem médica de alta qualidade de ${anatomia}${detalhePrompt}. O tipo de imagem é uma ${tipoImagem}${patologia}${detalhesAdicionais}${perspectiva}${estilo ? `, ${estilo}` : ''}${iluminacao}${cameraPrompt}${textoPrompt}. A imagem deve ter uma resolução de ${resolucao}, uma proporção de tela de ${proporcao}, no formato ${formato} e com ${fundo}${promptNegativo}.`;
+
+            generatedPromptTextarea.value = prompt;
+            promptOutputSection.classList.remove('hidden');
+            loadingIndicator.classList.add('hidden');
+            generatePromptBtn.disabled = false;
+        });
+
+        // Adiciona um listener para o botão de copiar
+        copyPromptBtn.addEventListener('click', () => {
+            generatedPromptTextarea.select();
+            document.execCommand('copy');
+            
+            copyMessage.textContent = 'Copiado!';
+            copyMessage.classList.remove('opacity-0');
+            copyMessage.classList.add('opacity-100');
+
+            setTimeout(() => {
+                copyMessage.classList.remove('opacity-100');
+                copyMessage.classList.add('opacity-0');
+            }, 2000);
+        });
+
+        // Listener para o botão de salvar
+        savePromptBtn.addEventListener('click', () => {
+            const prompt = generatedPromptTextarea.value;
+            if (prompt) {
+                savePrompt(prompt);
+            } else {
+                showAlert("Não há prompt para salvar.");
+            }
+        });
+
+        // Inicializar a lista de prompts salvos ao carregar a página
+        document.addEventListener('DOMContentLoaded', renderPrompts);
+    </script>
+
+</body>
+</html>
