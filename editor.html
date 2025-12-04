@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EAD - Editor de Dados KPI e Gráficos</title>
-    <link rel="icon" href="favicon.png" type="image/png">
     <!-- Carrega o Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -69,6 +68,8 @@
                 </select>
             </div>
         </section>
+        
+        <!-- SEÇÃO DE PROGRESSO DETALHADO FOI MOVIDA PARA DENTRO DA SEÇÃO 3 ABAIXO -->
 
         <form id="editor-form" class="space-y-10">
             
@@ -88,40 +89,19 @@
             </button>
 
 
-            <!-- SEÇÃO 2: GRÁFICOS INFERIORES -->
-            <h2 class="text-2xl font-bold text-gray-700 pb-2 border-b border-gray-200 pt-6">2. Dados dos Gráficos (Pontos)</h2>
+            <!-- === SEÇÃO 2: PROGRESSO DETALHADO (ANTIGA SEÇÃO 3) === -->
+            <h2 class="text-2xl font-bold text-gray-700 pb-2 border-b border-gray-200 pt-6">2. Dados de Progresso Detalhado (Card Novo)</h2>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                <!-- GRÁFICO 1: Limites Mensais (12 Barras) -->
-                <div class="md:col-span-1 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <h3 class="text-lg font-semibold mb-3">Limites Mensais (12 Meses)</h3>
-                    <div id="limits-chart-fields" class="grid grid-cols-4 gap-2">
-                        <!-- Chart 1 fields will be injected here -->
-                    </div>
+            <!-- SEÇÃO DE SELEÇÃO DA PÁGINA MOVIDA PARA CÁ -->
+            <section class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h3 class="text-xl font-bold text-blue-800 mb-3">Controle de Exibição da Seção de Progresso Detalhado</h3>
+                <div class="flex items-center space-x-4">
+                    <label for="progress-page-select" class="font-medium text-gray-700">Mostrar Cards Detalhados em:</label>
+                    <select id="progress-page-select" class="select-input w-64 border-blue-500">
+                        <!-- Options preenchidas por JS -->
+                    </select>
                 </div>
-
-                <!-- GRÁFICO 2: Atividades da Semana (7 Pontos) -->
-                <div class="md:col-span-1 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <h3 class="text-lg font-semibold mb-3">Atividades da Semana (7 Pontos)</h3>
-                    <div id="weekly-chart-fields" class="grid grid-cols-4 gap-2">
-                        <!-- Chart 2 fields will be injected here -->
-                    </div>
-                </div>
-
-                <!-- GRÁFICO 3: Atividades do 1º Semestre (6 Pontos) -->
-                <div class="md:col-span-1 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <h3 class="text-lg font-semibold mb-3">Atividades 1º Semestre (6 Pontos)</h3>
-                    <div id="semestre-chart-fields" class="grid grid-cols-4 gap-2">
-                        <!-- Chart 3 fields will be injected here -->
-                    </div>
-                </div>
-
-            </div>
-
-            
-            <!-- SEÇÃO 3: PROGRESSO DETALHADO (NOVO CARD) -->
-            <h2 class="text-2xl font-bold text-gray-700 pb-2 border-b border-gray-200 pt-6">3. Dados de Progresso Detalhado (Card Novo)</h2>
+            </section>
             
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Card 1: Métricas de Produção (Dinâmico) -->
@@ -170,6 +150,70 @@
                     </button>
                 </div>
             </div>
+            
+            
+            <!-- === SEÇÃO 3: GRÁFICOS INFERIORES (ANTIGA SEÇÃO 2) === -->
+            <h2 class="text-2xl font-bold text-gray-700 pb-2 border-b border-gray-200 pt-6">3. Dados dos Gráficos (Pontos e Metas)</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <!-- GRÁFICO 1: Limites Mensais (12 Barras) -->
+                <div class="md:col-span-1 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h3 class="text-lg font-semibold mb-3">Limites Mensais (12 Meses)</h3>
+                    <!-- Campo de Título -->
+                    <div class="mb-4">
+                        <div class="data-label">Título do Gráfico 1 (Anual)</div>
+                        <input name="titleMonthlyLimits" type="text" class="data-input text-left" />
+                    </div>
+                    <div id="limits-chart-fields" class="grid grid-cols-4 gap-2">
+                        <!-- Chart 1 fields will be injected here -->
+                    </div>
+                </div>
+
+                <!-- GRÁFICO 2: Atividades da Semana (7 Pontos + Meta) -->
+                <div class="md:col-span-1 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h3 class="text-lg font-semibold mb-3">Atividades da Semana (7 Pontos)</h3>
+                    <!-- Campo de Título -->
+                    <div class="mb-4">
+                        <div class="data-label">Título do Gráfico 2</div>
+                        <input name="titleWeeklyActivities" type="text" class="data-input text-left" />
+                    </div>
+                    <div class="mb-4">
+                        <div class="data-label">Meta Semanal (Linha pontilhada)</div>
+                        <input name="weeklyGoal" type="number" min="0" class="data-input" />
+                    </div>
+                    <div id="weekly-chart-fields" class="grid grid-cols-4 gap-2">
+                        <!-- Chart 2 fields will be injected here -->
+                    </div>
+                </div>
+
+                <!-- GRÁFICO 3: Atividades do 1º Semestre (6 Pontos + Meta) -->
+                <div class="md:col-span-1 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h3 class="text-lg font-semibold mb-3">Atividades 1º Semestre (6 Pontos)</h3>
+                    <!-- Campo de Título -->
+                    <div class="mb-4">
+                        <div class="data-label">Título do Gráfico 3</div>
+                        <input name="titleSemestreActivities" type="text" class="data-input text-left" />
+                    </div>
+                    <!-- NOVO: Seleção de Semestre (1º ou 2º) -->
+                    <div class="mb-4">
+                        <div class="data-label">Semestre de Referência</div>
+                        <select name="semestreRef" class="select-input">
+                            <option value="1">1º Semestre (Jan-Jun)</option>
+                            <option value="2">2º Semestre (Jul-Dez)</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <div class="data-label">Meta Semestral (Linha pontilhada)</div>
+                        <input name="semestreGoal" type="number" min="0" class="data-input" />
+                    </div>
+                    <div id="semestre-chart-fields" class="grid grid-cols-4 gap-2">
+                        <!-- Chart 3 fields will be injected here -->
+                    </div>
+                </div>
+
+            </div>
+
 
             <!-- SEÇÃO 4: FILTROS DO CABEÇALHO - REMOVIDA -->
             <div id="filter-fields" style="display: none;"></div>
@@ -199,6 +243,7 @@
         let STORAGE_KEY_KPI;
         let CHART_STORAGE_KEY_CHART;
         let FILTERS_STORAGE_KEY_FILTERS;
+        const PROGRESS_PAGE_KEY = 'progressPageId'; // CHAVE GLOBAL PARA A PÁGINA DO PROGRESSO DETALHADO
         
         let kpiCardIds = [];
         let currentPageId = 'index.html'; // Padrão se não for fornecido
@@ -246,6 +291,11 @@
         ];
         
         const initialChartData = {
+            // NOVOS: Títulos da Seção 2
+            titleMonthlyLimits: 'Limites Mensais (12 Meses)',
+            titleWeeklyActivities: 'Atividades da Semana (7 Pontos)',
+            titleSemestreActivities: 'Atividades 1º Semestre (6 Pontos)',
+
             monthlyLimits: {
                 labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'],
                 values: [40, 70, 90, 50, 100, 60, 30, 80, 55, 75, 45, 65], // Altura das barras (0-100)
@@ -253,13 +303,16 @@
             },
             weeklyActivities: {
                 labels: ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'],
-                mockValues: [20, 15, 25, 18, 30, 22, 19]
+                mockValues: [20, 15, 25, 18, 30, 22, 19],
+                goal: 30 // Meta Semanal
             },
             semestreActivities: {
                 labels: ['J', 'F', 'M', 'A', 'M', 'J'],
-                mockValues: [5, 7, 3, 9, 6, 11]
+                mockValues: [5, 7, 3, 9, 6, 11],
+                goal: 10, // Meta Semestral
+                semestreRef: '1' // 1º ou 2º Semestre
             },
-            // NOVO: DADOS PARA O PROGRESSO DETALHADO
+            // DADOS PARA O PROGRESSO DETALHADO
             detailedProgress: {
                 titleCard1: 'Métricas de Produção',
                 titleCard2: 'Novo Conteúdo vs. Revisão',
@@ -269,11 +322,9 @@
                     { label: 'Novas', value: 268, color: '#50C878' },
                     { label: 'Análise', value: 0, color: '#C0C0C0' }
                 ],
-                // ESTRUTURA ANTIGA REMOVIDA: novoValor: 130, atualizacaoValor: 72
-                // NOVA ESTRUTURA DINÂMICA
                 reviewMetrics: [
-                    { label: 'Novo', value: 130, color: '#38A169' }, // Mantendo a cor original verde
-                    { label: 'Atualização', value: 72, color: '#c0c0c0' } // Usando amarelo como um contraste
+                    { label: 'Novo', value: 130, color: '#38A169' }, 
+                    { label: 'Atualização', value: 72, color: '#FCD34D' }
                 ]
             }
         };
@@ -300,10 +351,9 @@
             const storedData = localStorage.getItem(STORAGE_KEY_KPI);
             let data = storedData ? JSON.parse(storedData) : initialKpiData;
             
-            // Garante que a nova estrutura de filtros esteja nos dados carregados
             return data.map(item => ({
                 ...item,
-                id: item.id || crypto.randomUUID(), // Garante que itens antigos tenham ID para o rastreador
+                id: item.id || crypto.randomUUID(), 
                 specialty: item.specialty || "Todos",
                 subspecialty: item.subspecialty || "Todos",
                 module: item.module || "Todos",
@@ -314,62 +364,62 @@
             const storedData = localStorage.getItem(CHART_STORAGE_KEY_CHART);
             let data = storedData ? JSON.parse(storedData) : initialChartData;
 
-            // Garante que detailedProgress exista mesmo se for a primeira carga
-            if (!data.detailedProgress) {
-                data.detailedProgress = initialChartData.detailedProgress;
+            // Corrige a lógica de fusão/fallback para os títulos e metas
+            const loadedData = storedData ? data : JSON.parse(JSON.stringify(initialChartData));
+            
+            // Mesclagem de Títulos da Seção 2
+            loadedData.titleMonthlyLimits = loadedData.titleMonthlyLimits !== undefined ? loadedData.titleMonthlyLimits : initialChartData.titleMonthlyLimits;
+            loadedData.titleWeeklyActivities = loadedData.titleWeeklyActivities !== undefined ? loadedData.titleWeeklyActivities : initialChartData.titleWeeklyActivities;
+            loadedData.titleSemestreActivities = loadedData.titleSemestreActivities !== undefined ? loadedData.titleSemestreActivities : initialChartData.titleSemestreActivities;
+            
+            // Mesclagem de Metas e SemestreRef
+            if (!loadedData.weeklyActivities) loadedData.weeklyActivities = initialChartData.weeklyActivities;
+            if (loadedData.weeklyActivities.goal === undefined) loadedData.weeklyActivities.goal = initialChartData.weeklyActivities.goal;
+
+            if (!loadedData.semestreActivities) loadedData.semestreActivities = initialChartData.semestreActivities;
+            if (loadedData.semestreActivities.goal === undefined) loadedData.semestreActivities.goal = initialChartData.semestreActivities.goal;
+            if (loadedData.semestreActivities.semestreRef === undefined) loadedData.semestreActivities.semestreRef = initialChartData.semestreActivities.semestreRef; // NOVO: Fallback para semestreRef
+
+            // Mesclagem do Detailed Progress (Mantido)
+            if (!loadedData.detailedProgress) {
+                loadedData.detailedProgress = initialChartData.detailedProgress;
             } else {
-                // Garante que a estrutura interna exista (útil se o dado for antigo)
-                if (!data.detailedProgress.productionMetrics) {
-                    data.detailedProgress.productionMetrics = initialChartData.detailedProgress.productionMetrics;
-                }
-                // NOVO: Faz o fallback para reviewMetrics, se a estrutura for antiga
-                if (!data.detailedProgress.reviewMetrics) {
-                     // Converte a estrutura antiga (novoValor/atualizacaoValor) para a nova se existir
-                    if (data.detailedProgress.novoValor !== undefined && data.detailedProgress.atualizacaoValor !== undefined) {
-                        data.detailedProgress.reviewMetrics = [
-                            { label: 'Novo', value: data.detailedProgress.novoValor, color: initialChartData.detailedProgress.reviewMetrics[0].color },
-                            { label: 'Atualização', value: data.detailedProgress.atualizacaoValor, color: initialChartData.detailedProgress.reviewMetrics[1].color }
-                        ];
-                        // Limpa os campos antigos para evitar confusão futura
-                        delete data.detailedProgress.novoValor;
-                        delete data.detailedProgress.atualizacaoValor;
-                    } else {
-                        // Se não houver dados antigos, usa o fallback inicial
-                        data.detailedProgress.reviewMetrics = initialChartData.detailedProgress.reviewMetrics;
-                    }
-                }
+                const detailed = loadedData.detailedProgress;
+                if (!detailed.productionMetrics) detailed.productionMetrics = initialChartData.detailedProgress.productionMetrics;
+                if (!detailed.reviewMetrics) detailed.reviewMetrics = initialChartData.detailedProgress.reviewMetrics;
                 
-                // Adiciona fallback para os títulos
-                if (data.detailedProgress.titleCard1 === undefined) {
-                    data.detailedProgress.titleCard1 = initialChartData.detailedProgress.titleCard1;
-                }
-                if (data.detailedProgress.titleCard2 === undefined) {
-                    data.detailedProgress.titleCard2 = initialChartData.detailedProgress.titleCard2;
-                }
+                if (detailed.titleCard1 === undefined) detailed.titleCard1 = initialChartData.detailedProgress.titleCard1;
+                if (detailed.titleCard2 === undefined) detailed.titleCard2 = initialChartData.detailedProgress.titleCard2;
             }
             
-            return data;
+            return loadedData;
         }
 
         function loadFilterData() {
-            // Não usamos mais isso para a UI, mas mantemos para consistência do save
             const storedData = localStorage.getItem(FILTERS_STORAGE_KEY_FILTERS);
             return storedData ? JSON.parse(storedData) : initialFilterData;
         }
+        
+        function loadProgressPageId() {
+            return localStorage.getItem(PROGRESS_PAGE_KEY) || 'index.html'; // Padrão é 'index.html'
+        }
+        
+        function saveProgressPageId(pageId) {
+            localStorage.setItem(PROGRESS_PAGE_KEY, pageId);
+        }
 
         function saveData(kpiData, chartData, filterData) {
-            // NOVO: Define a chave da data
             const DATE_KEY_DYNAMIC = `${DATE_STORAGE_KEY_BASE}_${currentPageId}`;
             const currentDate = getCurrentFormattedDateTime(); 
 
             localStorage.setItem(STORAGE_KEY_KPI, JSON.stringify(kpiData));
             localStorage.setItem(CHART_STORAGE_KEY_CHART, JSON.stringify(chartData));
             localStorage.setItem(FILTERS_STORAGE_KEY_FILTERS, JSON.stringify(filterData)); 
-            localStorage.setItem(DATE_KEY_DYNAMIC, currentDate); // SALVANDO A DATA DE MODIFICAÇÃO
+            localStorage.setItem(DATE_KEY_DYNAMIC, currentDate); 
         }
 
         // =================================================================
-        // FUNÇÕES DE RENDERIZAÇÃO E EDIÇÃO DO NOVO CARD
+        // FUNÇÕES DE RENDERIZAÇÃO E EDIÇÃO
         // =================================================================
 
         function calculatePercentage(current, total) {
@@ -377,10 +427,6 @@
             return Math.min(100, Math.round((current / total) * 100));
         }
         
-        /**
-         * Retorna a data e hora atuais formatadas como DD/MM/YYYY às HH:MM.
-         * @returns {string} Data e hora formatadas.
-         */
         function getCurrentFormattedDateTime() {
             const now = new Date();
             const date = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -388,14 +434,12 @@
             return `${date} às ${time}`;
         }
         
-        // Função auxiliar para criar as opções de <select>
         function createSelectOptions(options, selectedValue) {
             return options.map(option => 
                 `<option value="${option}" ${option === selectedValue ? 'selected' : ''}>${option}</option>`
             ).join('');
         }
         
-        // Gera o HTML de um único card de edição KPI
         function createKpiEditorCard(item) {
             const percentage = calculatePercentage(item.current, item.total);
             const cardId = `kpi-card-${item.id}`;
@@ -458,18 +502,14 @@
             `;
         }
 
-        // Função para adicionar um novo card ao formulário
         function addNewKpiCard() {
-            // Garante que o array de IDs esteja carregado
             if (kpiCardIds.length === 0) {
                 kpiCardIds = loadKpiData().map(item => item.id);
             }
             
-            // Encontra o ID mais alto e adiciona 1
             const maxId = kpiCardIds.length > 0 ? Math.max(...kpiCardIds.filter(id => typeof id === 'number')) : 0;
             const newId = maxId + 1;
 
-            // Dados iniciais para o novo card
             const newItem = {
                 id: newId,
                 title: `Novo Card ${newId}`,
@@ -497,7 +537,6 @@
             }
         }
         
-        // Remove um card do formulário
         function removeKpiCard(id) {
             if (confirm(`Tem certeza que deseja remover o card com ID ${id}? (Esta mudança será permanente após Salvar Dados)`)) {
                 const cardElement = document.getElementById(`kpi-card-${id}`);
@@ -509,7 +548,6 @@
             }
         }
         
-        // NOVO: Função para criar um único campo de métrica (usado para Card 1 e Card 2)
         function createMetricRow(metric, index, prefix) {
             const rowId = `${prefix}-metric-row-${index}`;
             const labelName = `${prefix}-label-${index}`;
@@ -550,7 +588,6 @@
             }
         }
         
-        // Função unificada para adicionar métricas em qualquer container
         function addProductionMetric(containerId, prefix) {
             const container = document.getElementById(containerId);
             let newIndex;
@@ -559,11 +596,11 @@
             if (prefix === 'prod') {
                 lastMetricIndex++; 
                 newIndex = lastMetricIndex;
-                initialColor = '#60A5FA'; // Azul para produção
+                initialColor = '#60A5FA'; 
             } else if (prefix === 'review') {
                 lastReviewIndex++;
                 newIndex = lastReviewIndex;
-                initialColor = '#c0c0c0'; // Amarelo/Laranja para revisão
+                initialColor = '#FCD34D'; 
             } else {
                 return;
             }
@@ -585,17 +622,14 @@
             }
         }
         
-        // NOVO: Função genérica para obter métricas dinâmicas do DOM
         function getMetricsFromDOM(containerId, prefix) {
             const metrics = [];
             const container = document.getElementById(containerId);
             if (!container) return metrics;
             
-            // Note: Usamos querySelectorAll('.metric-row') para garantir que pegamos apenas as linhas de métrica
             const metricRows = container.querySelectorAll('.metric-row');
             
             metricRows.forEach((row) => {
-                // Usa a estrutura de prefixo para encontrar os inputs corretamente
                 const labelInput = row.querySelector(`input[name^="${prefix}-label-"]`);
                 const valueInput = row.querySelector(`input[name^="${prefix}-value-"]`);
                 const colorInput = row.querySelector(`input[name^="${prefix}-color-"]`);
@@ -616,22 +650,45 @@
             const kpiData = loadKpiData();
             const chartData = loadChartData(); 
             const filterData = loadFilterData(); 
+            const progressPageId = loadProgressPageId(); 
             
-            // Renderiza o dropdown de seleção de página
-            renderPageSelect();
+            // Renderiza o dropdown de seleção de página (para a edição atual)
+            renderPageSelect('page-select', currentPageId);
+            
+            // Renderiza o dropdown de seleção da página de progresso detalhado
+            renderPageSelect('progress-page-select', progressPageId);
+
 
             // 1. Renderiza campos dos KPIs com Dropdowns de Filtro
             const kpiForm = document.getElementById('kpi-fields');
             kpiForm.innerHTML = kpiData.map(item => createKpiEditorCard(item)).join('');
             
-            // ATUALIZA A LISTA DE IDS ATIVOS
             kpiCardIds = kpiData.map(item => item.id);
 
 
-            // 2. Renderiza campos dos Gráficos (Limites e Atividades)
-            // ... (código existente para Gráficos)
+            // 2. Renderiza campos de Progresso Detalhado (Seção 2)
 
-            // 3. Renderiza campos do Gráfico 1: Limites Mensais
+            // 2.1. Renderiza seleção de página e títulos Card 1/Card 2
+            document.querySelector('input[name="titleCard1"]').value = chartData.detailedProgress.titleCard1;
+            document.querySelector('input[name="titleCard2"]').value = chartData.detailedProgress.titleCard2;
+            
+            const prodMetricsContainer = document.getElementById('production-metrics-fields');
+            prodMetricsContainer.innerHTML = chartData.detailedProgress.productionMetrics.map((metric, index) => {
+                return createMetricRow(metric, index, 'prod');
+            }).join('');
+            
+            const reviewMetricsContainer = document.getElementById('review-metrics-fields');
+            reviewMetricsContainer.innerHTML = chartData.detailedProgress.reviewMetrics.map((metric, index) => {
+                return createMetricRow(metric, index, 'review');
+            }).join('');
+            
+            lastMetricIndex = chartData.detailedProgress.productionMetrics.length > 0 ? chartData.detailedProgress.productionMetrics.length : 0;
+            lastReviewIndex = chartData.detailedProgress.reviewMetrics.length > 0 ? chartData.detailedProgress.reviewMetrics.length : 0;
+            
+            // 3. Renderiza campos dos Gráficos (Antiga Seção 2, agora Seção 3)
+
+            // 3.1. Renderiza campos do Gráfico 1: Limites Mensais
+            document.querySelector('input[name="titleMonthlyLimits"]').value = chartData.titleMonthlyLimits; // NOVO: Título
             const limitsForm = document.getElementById('limits-chart-fields');
             limitsForm.innerHTML = chartData.monthlyLimits.labels.map((label, index) => `
                 <div>
@@ -640,7 +697,9 @@
                 </div>
             `).join('');
 
-            // 4. Renderiza campos do Gráfico 2: Atividades da Semana
+            // 3.2. Renderiza campos do Gráfico 2: Atividades da Semana
+            document.querySelector('input[name="titleWeeklyActivities"]').value = chartData.titleWeeklyActivities; // NOVO: Título
+            document.querySelector('input[name="weeklyGoal"]').value = chartData.weeklyActivities.goal; 
             const weeklyForm = document.getElementById('weekly-chart-fields');
             weeklyForm.innerHTML = chartData.weeklyActivities.labels.map((label, index) => `
                 <div>
@@ -649,7 +708,10 @@
                 </div>
             `).join('');
 
-            // 5. Renderiza campos do Gráfico 3: Atividades 1º Semestre
+            // 3.3. Renderiza campos do Gráfico 3: Atividades 1º Semestre
+            document.querySelector('input[name="titleSemestreActivities"]').value = chartData.titleSemestreActivities; // NOVO: Título
+            document.querySelector('select[name="semestreRef"]').value = chartData.semestreActivities.semestreRef; // NOVO: Seleção de Semestre
+            document.querySelector('input[name="semestreGoal"]').value = chartData.semestreActivities.goal; 
             const semestreForm = document.getElementById('semestre-chart-fields');
             semestreForm.innerHTML = chartData.semestreActivities.labels.map((label, index) => `
                 <div>
@@ -658,37 +720,12 @@
                 </div>
             `).join('');
             
-            // 6. Renderiza campos de Progresso Detalhado (Seção 3)
-            const detailedProgress = chartData.detailedProgress;
-            
-            // Card 1: Títulos
-            document.querySelector('input[name="titleCard1"]').value = detailedProgress.titleCard1;
-            document.querySelector('input[name="titleCard2"]').value = detailedProgress.titleCard2;
-            
-            // Card 1: Métricas de Produção (Dinâmico - Prefix 'prod')
-            const prodMetricsContainer = document.getElementById('production-metrics-fields');
-            prodMetricsContainer.innerHTML = detailedProgress.productionMetrics.map((metric, index) => {
-                return createMetricRow(metric, index, 'prod');
-            }).join('');
-            
-            // Card 2: Métricas de Revisão (Dinâmico - Prefix 'review')
-            const reviewMetricsContainer = document.getElementById('review-metrics-fields');
-            reviewMetricsContainer.innerHTML = detailedProgress.reviewMetrics.map((metric, index) => {
-                return createMetricRow(metric, index, 'review');
-            }).join('');
-            
-            // Atualiza os índices globais para o próximo item a ser adicionado
-            lastMetricIndex = detailedProgress.productionMetrics.length > 0 ? detailedProgress.productionMetrics.length : 0;
-            lastReviewIndex = detailedProgress.reviewMetrics.length > 0 ? detailedProgress.reviewMetrics.length : 0;
-            
 
-            // 7. Renderiza campos dos Filtros do Cabeçalho - REMOVIDO DA UI
             const filterFields = document.getElementById('filter-fields');
             filterFields.innerHTML = "";
             
         }
 
-        // NOVO: Função para obter o Page ID da URL
         function getUrlParameter(name) {
             name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
             const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
@@ -696,14 +733,13 @@
             return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
         }
 
-        // NOVO: Função para renderizar o seletor de página
-        function renderPageSelect() {
-            const selectElement = document.getElementById('page-select');
+        function renderPageSelect(selectId, selectedPageId) {
+            const selectElement = document.getElementById(selectId);
             if (!selectElement) return;
 
             let optionsHtml = '';
             PAGE_DEFINITIONS.forEach(page => {
-                const isSelected = page.id === currentPageId;
+                const isSelected = page.id === selectedPageId;
                 optionsHtml += `<option value="${page.id}" ${isSelected ? 'selected' : ''}>${page.name}</option>`;
             });
 
@@ -715,6 +751,11 @@
             event.preventDefault();
             const form = event.target;
             const formData = new FormData(form);
+
+            // SALVAR A PÁGINA DE EXIBIÇÃO DO PROGRESSO DETALHADO
+            const newProgressPageId = document.getElementById('progress-page-select').value;
+            saveProgressPageId(newProgressPageId);
+
 
             // Processar Dados KPIs (LÓGICA DINÂMICA)
             const newKpiData = kpiCardIds.map(id => {
@@ -736,38 +777,46 @@
 
             // Processar Dados dos Gráficos (Inclui Progressos Detalhados)
             const oldChartData = loadChartData();
+            
+            // --- ATUALIZAÇÃO DOS GRÁFICOS (SEÇÃO 3) ---
             const newChartData = {
-                monthlyLimits: oldChartData.monthlyLimits,
-                weeklyActivities: oldChartData.weeklyActivities,
-                semestreActivities: oldChartData.semestreActivities,
-                detailedProgress: oldChartData.detailedProgress // Inicializa com dados antigos para atualizar
+                // Mesclagem e atualização dos objetos aninhados (mantendo dados não editáveis)
+                monthlyLimits: {
+                    ...oldChartData.monthlyLimits,
+                    values: oldChartData.monthlyLimits.labels.map((_, index) => 
+                        Math.min(100, Math.max(0, parseInt(formData.get(`monthly-limit-${index}`)))) || 0
+                    )
+                },
+                weeklyActivities: {
+                    ...oldChartData.weeklyActivities,
+                    mockValues: oldChartData.weeklyActivities.labels.map((_, index) => 
+                        parseInt(formData.get(`weekly-value-${index}`)) || 0
+                    ),
+                    goal: parseInt(formData.get('weeklyGoal')) || 0
+                },
+                semestreActivities: {
+                    ...oldChartData.semestreActivities,
+                    mockValues: oldChartData.semestreActivities.labels.map((_, index) => 
+                        parseInt(formData.get(`semestre-value-${index}`)) || 0
+                    ),
+                    goal: parseInt(formData.get('semestreGoal')) || 0,
+                    semestreRef: formData.get('semestreRef') // NOVO: Salva a referência do semestre
+                },
+                
+                // NOVOS: Salva Títulos da Seção 3 (Gráficos)
+                titleMonthlyLimits: formData.get('titleMonthlyLimits'),
+                titleWeeklyActivities: formData.get('titleWeeklyActivities'),
+                titleSemestreActivities: formData.get('titleSemestreActivities'),
+
+                // --- ATUALIZAÇÃO DO PROGRESSO DETALHADO (SEÇÃO 2) ---
+                detailedProgress: {
+                    titleCard1: formData.get('titleCard1') || oldChartData.detailedProgress.titleCard1,
+                    titleCard2: formData.get('titleCard2') || oldChartData.detailedProgress.titleCard2,
+                    productionMetrics: getMetricsFromDOM('production-metrics-fields', 'prod'),
+                    reviewMetrics: getMetricsFromDOM('review-metrics-fields', 'review')
+                }
             };
             
-            // Atualiza Gráficos de Limites e Atividades
-            newChartData.monthlyLimits.values = newChartData.monthlyLimits.labels.map((_, index) => 
-                Math.min(100, Math.max(0, parseInt(formData.get(`monthly-limit-${index}`)))) || 0
-            );
-
-            newChartData.weeklyActivities.mockValues = newChartData.weeklyActivities.labels.map((_, index) => 
-                parseInt(formData.get(`weekly-value-${index}`)) || 0
-            );
-
-            newChartData.semestreActivities.mockValues = newChartData.semestreActivities.labels.map((_, index) => 
-                parseInt(formData.get(`semestre-value-${index}`)) || 0
-            );
-            
-            // NOVO: Atualiza Dados do Progresso Detalhado (Títulos e Métricas Dinâmicas)
-            newChartData.detailedProgress.titleCard1 = formData.get('titleCard1') || initialChartData.detailedProgress.titleCard1;
-            newChartData.detailedProgress.titleCard2 = formData.get('titleCard2') || initialChartData.detailedProgress.titleCard2;
-            
-            // Usa a função que lê do DOM para capturar os arrays dinâmicos
-            newChartData.detailedProgress.productionMetrics = getMetricsFromDOM('production-metrics-fields', 'prod');
-            newChartData.detailedProgress.reviewMetrics = getMetricsFromDOM('review-metrics-fields', 'review');
-            
-            // REMOVE os campos antigos para garantir que a estrutura final seja limpa
-            delete newChartData.detailedProgress.novoValor;
-            delete newChartData.detailedProgress.atualizacaoValor;
-
             const newFilterData = loadFilterData(); 
 
             saveData(newKpiData, newChartData, newFilterData); 
@@ -783,10 +832,10 @@
         function handleReset() {
             if (confirm(`Tem certeza que deseja resetar TODOS os dados (KPIs e Gráficos) para a página ${currentPageId}?`)) {
                 
-                // NOVO: Remove explicitamente a chave de data ao resetar
                 const DATE_KEY_DYNAMIC = `${DATE_STORAGE_KEY_BASE}_${currentPageId}`;
                 localStorage.removeItem(DATE_KEY_DYNAMIC); 
-
+                localStorage.removeItem(PROGRESS_PAGE_KEY); 
+                
                 saveData(initialKpiData, initialChartData, initialFilterData); 
                 renderForm();
                 console.log(`Dados da página ${currentPageId} resetados! Por favor, atualize o Dashboard para ver as mudanças.`);
@@ -794,20 +843,16 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // 1. Define a chave de armazenamento com base no parâmetro 'page' na URL
             const requestedPage = getUrlParameter('page');
-            const pageToLoad = requestedPage || 'index.html'; // Padrão para index.html
+            const pageToLoad = requestedPage || 'index.html'; 
             
             setStorageKeys(pageToLoad);
 
-            // 2. Renderiza o formulário com os dados da chave específica
             renderForm();
 
-            // 3. Configura listeners
             document.getElementById('editor-form').addEventListener('submit', handleSubmit);
             document.getElementById('reset-button').addEventListener('click', handleReset);
         });
     </script>
 </body>
-
 </html>

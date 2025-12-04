@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - Fábrica de Conteúdo</title>
+  <title>EAD - Dashboard Prepara</title>
   <link rel="icon" href="favicon.png" type="image/png">
   <!-- Carrega o Tailwind CSS via CDN para os estilos -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -76,6 +76,25 @@
     .card-base:hover {
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg simulado no hover */
     }
+    
+    /* Garante que a área do gráfico não corte o tooltip */
+    #monthly-limits-chart-area {
+        overflow: visible; 
+    }
+    
+    /* Garante que a área do gráfico de linha não corte o tooltip */
+    .line-chart-area {
+        overflow: visible;
+    }
+    
+    /* Tooltip padrão para gráficos de linha */
+    .point-tooltip {
+        position: absolute;
+        pointer-events: none;
+        z-index: 10;
+        transition: opacity 0.2s;
+    }
+    
   </style>
 </head>
 
@@ -105,6 +124,7 @@
     const FILTERS_STORAGE_KEY_SUFFIX = 'filters';
     const DATE_STORAGE_KEY_BASE = 'lastUpdateDate'; // Chave base para a data
     const AUTH_KEY = 'isLoggedIn'; // CHAVE DE AUTENTICAÇÃO
+    const PROGRESS_PAGE_KEY = 'progressPageId'; // CHAVE GLOBAL PARA A PÁGINA DO PROGRESSO DETALHADO
 
     // Definições de Filtro (DEVE SER IDÊNTICO AO EDITOR)
     const FILTER_DEFINITIONS = {
@@ -119,7 +139,8 @@
       name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
       const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
       const results = regex.exec(location.search);
-      return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+      // CORRIGIDO: Removida a string de template literal inválida
+      return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' ')); 
     }
 
     // Determina o Page ID (usando o parâmetro 'page' se existir)
@@ -145,6 +166,11 @@
     ];
 
     const initialChartData = {
+      // NOVOS: Títulos da Seção 2 (Gráficos)
+      titleMonthlyLimits: 'Limites Mensais',
+      titleWeeklyActivities: 'Atividades da Semana',
+      titleSemestreActivities: 'Atividades do 1º Semestre',
+
       monthlyLimits: {
         labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'],
         values: [40, 70, 90, 50, 100, 60, 30, 80, 55, 75, 45, 65],
@@ -152,13 +178,16 @@
       },
       weeklyActivities: {
         labels: ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'],
-        mockValues: [20, 15, 25, 18, 30, 22, 19]
+        mockValues: [20, 15, 25, 18, 30, 22, 19],
+        goal: 30 // Meta Semanal
       },
       semestreActivities: {
         labels: ['J', 'F', 'M', 'A', 'M', 'J'],
-        mockValues: [5, 7, 3, 9, 6, 11]
+        mockValues: [5, 7, 3, 9, 6, 11],
+        goal: 10, // Meta Semestral
+        semestreRef: '1' // 1º ou 2º Semestre
       },
-      // NOVO: DADOS PARA O PROGRESSO DETALHADO (Sincronizado com editor.html)
+      // DADOS PARA O PROGRESSO DETALHADO (Sincronizado com editor.html)
       detailedProgress: {
           titleCard1: 'Métricas de Produção', // Título editável
           titleCard2: 'Novo Conteúdo vs. Revisão', // Título editável
@@ -168,10 +197,9 @@
               { label: 'Novas', value: 268, color: '#50C878' },
               { label: 'Análise', value: 0, color: '#C0C0C0' }
           ],
-          // ESTRUTURA ATUALIZADA
           reviewMetrics: [
               { label: 'Novo', value: 130, color: '#38A169' }, 
-              { label: 'Atualização', value: 72, color: '#c0c0c0' }
+              { label: 'Atualização', value: 72, color: '#FCD34D' }
           ]
       }
     };
@@ -207,41 +235,52 @@
       const storedData = localStorage.getItem(CHART_STORAGE_KEY_CHART);
       let data = storedData ? JSON.parse(storedData) : initialChartData;
       
-      // Garante que detailedProgress exista, usando fallback se necessário
+      // Tratamento de Fallback para Títulos da Seção 2
+      if (data.titleMonthlyLimits === undefined) data.titleMonthlyLimits = initialChartData.titleMonthlyLimits;
+      if (data.titleWeeklyActivities === undefined) data.titleWeeklyActivities = initialChartData.titleWeeklyActivities;
+      if (data.titleSemestreActivities === undefined) data.titleSemestreActivities = initialChartData.titleSemestreActivities;
+      
+      // Garante que detailedProgress e metas existam (lógica de fallback mantida)
       if (!data.detailedProgress) {
           data.detailedProgress = initialChartData.detailedProgress;
-          return data;
-      } 
-      
-      // Garante que a estrutura interna exista (útil se o dado for antigo)
-      // Fallback para productionMetrics
-      if (!data.detailedProgress.productionMetrics) {
-          data.detailedProgress.productionMetrics = initialChartData.detailedProgress.productionMetrics;
-      }
-      
-      // Fallback para reviewMetrics e conversão da estrutura antiga (novoValor/atualizacaoValor)
-      if (!data.detailedProgress.reviewMetrics) {
-          if (data.detailedProgress.novoValor !== undefined && data.detailedProgress.atualizacaoValor !== undefined) {
-              // Converte a estrutura antiga para a nova (mantendo as cores do fallback)
-              data.detailedProgress.reviewMetrics = [
-                  { label: 'Novo', value: data.detailedProgress.novoValor, color: initialChartData.detailedProgress.reviewMetrics[0].color },
-                  { label: 'Atualização', value: data.detailedProgress.atualizacaoValor, color: initialChartData.detailedProgress.reviewMetrics[1].color }
-              ];
-              // Opcional: Limpar campos antigos para manter a estrutura limpa
-              delete data.detailedProgress.novoValor;
-              delete data.detailedProgress.atualizacaoValor;
-          } else {
-              // Se não houver dados antigos, usa o fallback inicial
-              data.detailedProgress.reviewMetrics = initialChartData.detailedProgress.reviewMetrics;
+      } else {
+          // Adiciona fallback para as metas se for a primeira carga da nova versão
+          if (data.weeklyActivities.goal === undefined) data.weeklyActivities.goal = initialChartData.weeklyActivities.goal;
+          if (data.semestreActivities.goal === undefined) data.semestreActivities.goal = initialChartData.semestreActivities.goal;
+          if (data.semestreActivities.semestreRef === undefined) data.semestreActivities.semestreRef = initialChartData.semestreActivities.semestreRef;
+
+          // Garante que a estrutura interna de progresso detalhado exista
+          const detailed = data.detailedProgress;
+          if (!detailed) { data.detailedProgress = initialChartData.detailedProgress; return data; }
+
+          if (!detailed.productionMetrics) {
+              detailed.productionMetrics = initialChartData.detailedProgress.productionMetrics;
           }
-      }
-      
-      // Adiciona fallback para os títulos
-      if (data.detailedProgress.titleCard1 === undefined) {
-          data.detailedProgress.titleCard1 = initialChartData.detailedProgress.titleCard1;
-      }
-      if (data.detailedProgress.titleCard2 === undefined) {
-          data.detailedProgress.titleCard2 = initialChartData.detailedProgress.titleCard2;
+          
+          // Fallback para reviewMetrics e conversão da estrutura antiga (novoValor/atualizacaoValor)
+          if (!detailed.reviewMetrics) {
+              if (detailed.novoValor !== undefined && detailed.atualizacaoValor !== undefined) {
+                  // Converte a estrutura antiga para a nova (mantendo as cores do fallback)
+                  detailed.reviewMetrics = [
+                      { label: 'Novo', value: detailed.novoValor, color: initialChartData.detailedProgress.reviewMetrics[0].color },
+                      { label: 'Atualização', value: detailed.atualizacaoValor, color: initialChartData.detailedProgress.reviewMetrics[1].color }
+                  ];
+                  // Opcional: Limpar campos antigos para manter a estrutura limpa
+                  delete detailed.novoValor;
+                  delete detailed.atualizacaoValor;
+              } else {
+                  // Se não houver dados antigos, usa o fallback inicial
+                  detailed.reviewMetrics = initialChartData.detailedProgress.reviewMetrics;
+              }
+          }
+          
+          // Adiciona fallback para os títulos
+          if (detailed.titleCard1 === undefined) {
+              detailed.titleCard1 = initialChartData.detailedProgress.titleCard1;
+          }
+          if (detailed.titleCard2 === undefined) {
+              detailed.titleCard2 = initialChartData.detailedProgress.titleCard2;
+          }
       }
       
       return data;
@@ -252,7 +291,12 @@
       return storedData ? JSON.parse(storedData) : initialFilterStatus;
     }
 
-    // NOVO: Função para carregar a data da última modificação
+    // NOVO: Função para carregar a página de exibição do progresso detalhado
+    function loadProgressPageId() {
+        return localStorage.getItem(PROGRESS_PAGE_KEY) || 'index.html';
+    }
+
+    // Função para carregar a data da última modificação
     function loadLastUpdateDate() {
       // Carrega a data salva no localStorage (que é atualizada no editor)
       return localStorage.getItem(DATE_KEY) || 'Nenhuma modificação salva';
@@ -269,12 +313,20 @@
     const chartData = loadChartData();
     const filterStatus = loadFilterStatus();
     const lastUpdateDate = loadLastUpdateDate(); // Carrega a data
+    const progressPageId = loadProgressPageId(); // Carrega a página de exibição do progresso
 
     let showGeneralData = true;
 
     // =================================================================
     // 2. FUNÇÕES AUXILIARES (ÍCONES SVG)
     // =================================================================
+
+    // Ícone de Edição para o KPI Card (mantido para evitar ReferenceError no filtro)
+    const getEditIcon = () => `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-500 hover:text-indigo-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+    `;
 
     const getCheckCircleIcon = () => `
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${AZURE_COLOR}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500 w-5 h-5 mr-2">
@@ -301,7 +353,7 @@
     const getSettingsIcon = () => `
             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 012-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             </svg>
         `;
 
@@ -370,7 +422,7 @@
                             <!-- AGORA EXIBE A DATA CARREGADA DO LOCAL STORAGE -->
                             <p class="text-xs text-gray-500 mt-1">Atualizado em: ${displayedDate}</p>
                         </div>
-                        <div class="flex flex-wrap gap-3">
+                        <div class="flex flex-wrap gap-3 items-center">
                             ${dropdownsHtml}
                         </div>
                     </div>
@@ -379,10 +431,13 @@
     }
 
     function filterAndRenderKpis() {
-      // ... restante da função filterAndRenderKpis
+      // Verifica o status de login para habilitar o link de edição
+      const isLoggedIn = checkAuthStatus();
+      
       const kpiContainer = document.getElementById('kpi-container');
       if (!kpiContainer) return;
 
+      // Filtra APENAS os cards que correspondem aos filtros
       const filteredKpis = kpiData.filter(kpi => {
         let matchesSpecialty = currentFilterValues.specialty === 'Todos' || kpi.specialty === currentFilterValues.specialty;
         let matchesSubspecialty = currentFilterValues.subspecialty === 'Todos' || kpi.subspecialty === currentFilterValues.subspecialty;
@@ -391,32 +446,42 @@
         return matchesSpecialty && matchesSubspecialty && matchesModule;
       });
 
-      kpiContainer.innerHTML = filteredKpis.map(metric => `
-                <!-- CLASSE shadow-sm E card-base ADICIONADAS AQUI -->
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
-                    <div class="flex items-center mb-4">
+      kpiContainer.innerHTML = filteredKpis.map(metric => {
+        
+        const percentage = metric.percentage;
+
+        return `
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
                         ${getCheckCircleIcon()}
                         <span class="text-sm font-semibold text-gray-800">${metric.title}</span>
                     </div>
-                    <div class="relative pt-1">
-                        <div class="flex mb-1 items-center justify-between">
-                            <span class="text-xs font-semibold inline-block" style="color: ${AZURE_COLOR};">
-                                ${metric.percentage}%
-                            </span>
-                            <span class="text-xs font-medium text-gray-500">
-                                ${metric.current} / ${metric.total}
-                            </span>
-                        </div>
-                        <div class="overflow-hidden h-2 mb-4 text-xs flex rounded-full bg-blue-100">
-                            <div 
-                                style="width: ${metric.percentage}%; background-color: ${AZURE_COLOR};" 
-                                class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center rounded-l-full"
-                            ></div>
-                        </div>
+                    ${isLoggedIn ? `
+                        <a href="editor.html?page=${FILE_ID}#kpi-card-${metric.id}" class="transition-transform duration-150 transform hover:scale-110" title="Editar este KPI">
+                            ${getEditIcon()}
+                        </a>
+                    ` : ''}
+                </div>
+                <div class="relative pt-1">
+                    <div class="flex mb-1 items-center justify-between">
+                        <span class="text-xs font-semibold inline-block" style="color: ${AZURE_COLOR};">
+                            ${metric.percentage}%
+                        </span>
+                        <span class="text-xs font-medium text-gray-500">
+                            ${metric.current} / ${metric.total}
+                        </span>
+                    </div>
+                    <div class="overflow-hidden h-2 mb-4 text-xs flex rounded-full bg-blue-100">
+                        <div 
+                            style="width: ${metric.percentage}%; background-color: ${AZURE_COLOR};" 
+                            class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center rounded-l-full"
+                        ></div>
                     </div>
                 </div>
-            `).join('');
-
+            </div>
+        `;
+      }).join('');
     }
 
     function renderKPICards() {
@@ -426,7 +491,8 @@
     function handleFilterChange(selectElement) {
       const key = selectElement.getAttribute('data-filter-key');
       currentFilterValues[key] = selectElement.value;
-      filterAndRenderKpis();
+      // Chamada para renderizar APENAS os KPIs filtrados
+      filterAndRenderKpis(); 
     }
 
     // =================================================================
@@ -437,6 +503,8 @@
       const dataValues = chartData.monthlyLimits.values;
       const labels = chartData.monthlyLimits.labels;
       const limitHeight = chartData.monthlyLimits.limit;
+      // Cálculo do total: Soma dos valores de produção ao longo do ano.
+      const totalSum = dataValues.reduce((sum, value) => sum + value, 0);
 
       let barsHtml = labels.map((label, index) => {
         const height = dataValues[index];
@@ -444,25 +512,31 @@
                     <div 
                         data-index="${index}"
                         data-value="${dataValues[index]}%"
-                        class="flex flex-col items-center h-full justify-end w-6 sm:w-8 mx-1 relative chart-bar"
+                        class="flex flex-col items-center h-full justify-end w-6 sm:w-8 mx-1 relative chart-bar group"
                     >
-                        <div id="tooltip-${index}" class="absolute bottom-full transform -translate-y-2 px-2 py-1 rounded-md text-white shadow-lg pointer-events-none z-10 hidden" style="background-color: ${VIOLET_DARK};">
-                            <span class="text-xs font-bold">${dataValues[index]}%</span>
+                        <!-- Tooltip CORRIGIDO para usar ID único, valor e posicionamento dinâmico -->
+                        <div 
+                            id="tooltip-monthly-${index}" 
+                            class="absolute transform -translate-x-1/2 px-2 py-1 rounded-md text-white shadow-lg pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" 
+                            style="background-color: ${VIOLET_DARK}; top: calc(100% - ${height}% - 28px); left: 50%;"
+                        >
+                            <!-- MOSTRA O VALOR DA BARRA (Total do mês) -->
+                            <span class="text-xs font-bold">${dataValues[index]}</span>
                             <div class="absolute w-0 h-0 border-x-4 border-t-4 transform -translate-x-1/2" style="bottom: -4px; left: 50%; border-top-color: ${VIOLET_DARK}; border-left-color: transparent; border-right-color: transparent; border-bottom-color: transparent;"></div>
                         </div>
                         <div
                             class="rounded-t-lg transition-all duration-300 ease-out hover:shadow-lg w-full"
                             style="background: linear-gradient(to top, ${VIOLET_DARK}, ${VIOLET_GRADIENT_END}); height: ${dataValues[index]}%;"
-                        ></div>
+                            ></div>
                     </div>
                 `;
       }).join('');
 
-      // CLASSE shadow-sm E card-base ADICIONADAS AQUI
+      // CORREÇÃO TÍTULO: Subtítulo "Limite" removido
       return `
                 <div class="bg-white p-6 rounded-xl shadow-sm card-base h-96 flex flex-col hover:shadow-lg">
-                    <h3 class="text-lg font-semibold text-gray-800">Limites mensais</h3>
-                    <div class="text-sm text-gray-500 mb-2">Limite</div>
+                    <h3 class="text-lg font-semibold text-gray-800">${chartData.titleMonthlyLimits} (Total: ${totalSum})</h3>
+                    
                     <div id="monthly-limits-chart-area" class="flex-grow flex items-end justify-around p-5 bg-gray-50 rounded-lg relative">
                         <div class="absolute left-0 right-0 border-t-2 border-dashed"
                             style="bottom: ${limitHeight}%; border-color: ${VIOLET_LIGHT}; height: 2px; width: 100%;">
@@ -477,20 +551,7 @@
     }
 
     function setupBarChartInteractivity() {
-      const chartArea = document.getElementById('monthly-limits-chart-area');
-      if (!chartArea) return;
-
-      chartArea.querySelectorAll('.chart-bar').forEach(bar => {
-        const index = bar.getAttribute('data-index');
-        const tooltip = document.getElementById(`tooltip-${index}`);
-
-        bar.addEventListener('mouseenter', () => {
-          if (tooltip) tooltip.classList.remove('hidden');
-        });
-        bar.addEventListener('mouseleave', () => {
-          if (tooltip) tooltip.classList.add('hidden');
-        });
-      });
+      // Deixado vazio intencionalmente. A interatividade agora é tratada por CSS (group/group-hover).
     }
 
 
@@ -505,6 +566,8 @@
       const clampedValue = Math.min(MAX_SCALE_VALUE, value);
       return Y_BASE - (clampedValue / MAX_SCALE_VALUE * PLOTTING_HEIGHT);
     }
+    
+    // calculateTrendLine removido
 
     function generateSvgPoints(values) {
       const numPoints = values.length;
@@ -528,76 +591,99 @@
       return `<line x1="0" y1="140" x2="300" y2="140" stroke="#ddd" stroke-width="1" />`;
     }
 
-    function createTaskLineChartMock(title) {
+    function createTaskLineChartMock(baseTitle) {
       let data;
-      if (title === "Atividades da semana") {
+      let goal;
+      let title; // Variável local para o título final
+      let isSemestre = false;
+      
+      if (baseTitle === "Atividades da semana") {
         data = chartData.weeklyActivities;
-      } else if (title === "Atividades do 1º semestre") {
+        title = chartData.titleWeeklyActivities; // Título customizado do editor
+        goal = data.goal; // Pega a meta do dado
+      } else if (baseTitle === "Atividades do 1º semestre") {
+        isSemestre = true;
         data = chartData.semestreActivities;
+        
+        // CORREÇÃO: Remove a informação do semestre do título customizado (que pode ter sido salva com o sufixo)
+        const customTitle = chartData.titleSemestreActivities;
+        const cleanedTitle = customTitle.replace(/\s*\(\dº Semestre\)/g, '').trim();
+        title = `${cleanedTitle}`; 
+        
+        goal = data.goal; // Pega a meta do dado
       } else {
         return "";
       }
 
       const labels = data.labels;
-      const mockValues = data.mockValues;
-      const points = generateSvgPoints(mockValues);
+      const currentValues = data.mockValues;
+      const currentPoints = generateSvgPoints(currentValues);
+      
+      // NOVO: Cálculo do total de valores para o título
+      const totalSum = currentValues.reduce((sum, value) => sum + value, 0);
 
-      const coords = points.split(' ').map(p => {
+      // Converte a meta para a posição Y do SVG
+      const goalY = convertValueToSvgY(goal);
+      
+      // Linha de Meta (Goal Setter)
+      const goalLineHtml = (goal > 0) ? `
+          <line x1="0" y1="${goalY}" x2="300" y2="${goalY}" stroke="#FCD34D" stroke-width="2" stroke-dasharray="8 4" />
+          <text x="290" y="${goalY - 3}" fill="#FCD34D" font-size="8" text-anchor="end" font-weight="bold">META: ${goal}</text>
+      ` : '';
+
+
+      const coords = currentPoints.split(' ').map(p => {
         const [x, y] = p.split(',');
         return { x: parseFloat(x), y: parseFloat(y) };
       });
 
       const pointsHtml = coords.map((coord, index) => {
+        // CORREÇÃO: Setinha (polígono) reinserida e garantido o posicionamento relativo ao ponto.
         return `
-                    <g data-index="${index}" data-value="${mockValues[index]}" transform="translate(${coord.x}, ${coord.y})" class="line-chart-point">
+                    <g transform="translate(${coord.x}, ${coord.y})" class="line-chart-point group">
+                        <!-- Tooltip CORRIGIDO: Posição absoluta dentro do SVG, agora com o triângulo (seta) -->
+                        <g class="opacity-0 group-hover:opacity-100 transition-opacity duration-200" transform="translate(0, 10)">
+                            <rect x="-10" y="-30" width="20" height="20" rx="3" fill="${VIOLET_DARK}" transform="translate(0, -10)"/>
+                            <text x="0" y="-18" text-anchor="middle" fill="white" font-size="8" font-weight="bold" transform="translate(0, -10)">${currentValues[index]}</text>
+                            <polygon points="0,0 -4,10 4,10" fill="${VIOLET_DARK}" transform="translate(0, -10) rotate(180)"/>
+                            
+                        </g>
+                        
                         <circle cx="0" cy="0" r="15" fill="transparent" cursor="pointer" />
                         <circle id="${title.replace(/\s/g, '-')}-circle-${index}" cx="0" cy="0" r="3" fill="white" stroke="${VIOLET_DARK}" stroke-width="2" class="transition-all duration-150" />
-                        <g id="${title.replace(/\s/g, '-')}-tooltip-${index}" class="hidden">
-                            <rect x="-10" y="-30" width="20" height="20" rx="3" fill="${VIOLET_DARK}" />
-                            <text x="0" y="-18" text-anchor="middle" fill="white" font-size="8" font-weight="bold">${mockValues[index]}</text>
-                            <polygon points="0,-10 -3,0 3,0" fill="${VIOLET_DARK}" transform="translate(0, -10)"/>
-                        </g>
                     </g>
                 `;
       }).join('');
 
+      // Controles HTML/Legenda removido
+      let controlsHtml = ''; 
+      
+      // Ajusta os rótulos do semestre para exibir Jan-Jun ou Jul-Dez
+      const displayLabels = isSemestre ? ((data.semestreRef === '2') ? ['Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'] : ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun']) : labels;
+
+
       // CLASSE shadow-sm E card-base ADICIONADAS AQUI
       return `
                 <div class="bg-white p-6 rounded-xl shadow-sm card-base h-96 flex flex-col hover:shadow-lg">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">${title}</h3>
-                    <div id="${title.replace(/\s/g, '-')}-chart-area" class="flex-grow flex items-end p-5 bg-gray-50 rounded-lg relative">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">${title} (Total: ${totalSum})</h3>
+                    <div id="${title.replace(/\s/g, '-')}-chart-area" class="flex-grow flex items-end p-5 bg-gray-50 rounded-lg relative line-chart-area">
                         <svg viewBox="0 0 300 150" class="w-full h-full" preserveAspectRatio="none"> 
                             ${generateGridLinesAndLabels()}
-                            <polyline fill="none" stroke="${VIOLET_DARK}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="${points}" />
+                            ${goalLineHtml} <!-- Linha de Meta -->
+                            <polyline fill="none" stroke="${VIOLET_DARK}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="${currentPoints}" />
                             ${pointsHtml}
                         </svg>
                     </div>
+                    ${controlsHtml}
                     <div class="flex justify-between text-xs text-gray-600 mt-2">
-                        ${labels.map(m => `<span class="flex-1 text-center font-semibold">${m}</span>`).join('')}
+                        ${displayLabels.map(m => `<span class="flex-1 text-center font-semibold">${m}</span>`).join('')}
                     </div>
                 </div>
             `;
     }
 
     function setupLineChartInteractivity(title) {
-      const chartAreaId = `${title.replace(/\s/g, '-')}-chart-area`;
-      const chartArea = document.getElementById(chartAreaId);
-      if (!chartArea) return;
-
-      chartArea.querySelectorAll('.line-chart-point').forEach(pointGroup => {
-        const index = pointGroup.getAttribute('data-index');
-        const tooltip = document.getElementById(`${title.replace(/\s/g, '-')}-tooltip-${index}`);
-        const circle = document.getElementById(`${title.replace(/\s/g, '-')}-circle-${index}`);
-
-        pointGroup.addEventListener('mouseenter', () => {
-          if (tooltip) tooltip.classList.remove('hidden');
-          if (circle) circle.setAttribute('r', '5');
-        });
-        pointGroup.addEventListener('mouseleave', () => {
-          if (tooltip) tooltip.classList.add('hidden');
-          if (circle) circle.setAttribute('r', '3');
-        });
-      });
+      // Deixado vazio intencionalmente. A interatividade agora é tratada por CSS (group/group-hover).
     }
 
     // =================================================================
@@ -605,6 +691,11 @@
     // AGORA UTILIZA DADOS CARREGADOS DO chartData e SUPORTA DADOS DINÂMICOS PARA AMBOS OS CARDS
     // =================================================================
     function createDetailedProgressCard() {
+        // Verifica se a página atual é a página definida para exibir o progresso detalhado
+        if (FILE_ID !== loadProgressPageId()) { // Usa a função loadProgressPageId()
+            return ''; // Não renderiza se não for a página correta
+        }
+        
         // Busca dados do chartData
         const detailedData = chartData.detailedProgress;
         const productionMetrics = detailedData.productionMetrics || [];
@@ -691,11 +782,27 @@
     // =================================================================
 
     function renderGeneralDataSection() {
+        // O card de progresso detalhado só será renderizado se FILE_ID === progressPageId
+        const detailedCardsHtml = createDetailedProgressCard();
+        
+        // Mapeia as funções de criação de gráfico para serem chamadas na nova ordem
+        const monthlyLimitsHtml = createMonthlyLimitsChart();
+        const weeklyActivitiesHtml = createTaskLineChartMock("Atividades da semana");
+        const semestreActivitiesHtml = createTaskLineChartMock("Atividades do 1º semestre");
+
+        // NOVO: Nova Ordem dos Gráficos: Semana, Semestre, Ano (Limites Mensais)
+        const newChartsHtml = `
+            ${weeklyActivitiesHtml}
+            ${semestreActivitiesHtml}
+            ${monthlyLimitsHtml}
+        `;
+
+
         const generalDataHtml = `
-            <!-- NOVO CARD: PROGRESSO DETALHADO (NOVO TOPO) -->
-            ${createDetailedProgressCard()}
+            <!-- NOVO CARD: PROGRESSO DETALHADO (RENDERIZADO CONDICIONALMENTE) -->
+            ${detailedCardsHtml}
             
-            <section class="mb-4 mt-8">
+            <section class="mb-4 ${detailedCardsHtml ? 'mt-8' : ''}"> <!-- Ajusta margem se os cards detalhados estiverem presentes -->
                 <!-- CLASSE shadow-sm E card-base ADICIONADAS AQUI -->
                 <div 
                     id="toggle-header"
@@ -710,9 +817,7 @@
             </section>
 
             <section id="charts-container" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 general-data-container ${showGeneralData ? '' : 'hidden'}">
-                ${createMonthlyLimitsChart()}
-                ${createTaskLineChartMock("Atividades da semana")}
-                ${createTaskLineChartMock("Atividades do 1º semestre")}
+                ${newChartsHtml}
             </section>
         `;
         const mainContent = document.getElementById('main-content');
@@ -765,7 +870,7 @@
 
       // Definição dos itens de navegação (O 'page' é o nome do arquivo)
       const navItems = [
-        { name: 'KPI Geral', page: 'kpi-geral.html' },
+        { name: 'KPI Geral', page: 'index.html' },
         { name: 'KPI Mês', page: 'kpi-mes.html' },
         { name: 'Vídeos', page: 'videos.html' },
         { name: 'Flashcards', page: 'flashcards.html' },
@@ -858,7 +963,7 @@
       renderGeneralDataSection();
 
       filterAndRenderKpis();
-      setupBarChartInteractivity();
+      // setupBarChartInteractivity() removida na correção
       setupLineChartInteractivity("Atividades da semana");
       setupLineChartInteractivity("Atividades do 1º semestre");
     }
