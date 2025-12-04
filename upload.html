@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EAD - Editor V2: Upload de Dados</title>
+    <!-- Carrega o Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carrega a biblioteca SheetJS para leitura de arquivos Excel/CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .data-table th, .data-table td {
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            text-align: left;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 sm:p-8 font-sans">
+
+    <div class="max-w-6xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-lg">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Editor V2: Simulação de Importação de Excel</h1>
+        <p class="text-gray-500 mb-6">Esta interface simula a importação de dados de um arquivo Excel/CSV para atualizar a Dashboard.</p>
+        
+        <!-- INFORMAÇÕES DE ESTRUTURA ESPERADA -->
+        <section class="border border-indigo-200 p-4 rounded-lg bg-indigo-50 mb-6">
+            <h3 class="text-lg font-semibold text-indigo-800 mb-2">Estrutura de Arquivo Esperada:</h3>
+            <ul class="text-sm text-indigo-700 list-disc ml-5">
+                <li>O arquivo deve ter duas abas: **Sheet1** (para KPIs) e **Sheet2** (para Gráficos).</li>
+                <li>Ambas as abas devem conter uma coluna **"PageID"** (ex: `index.html`, `videos.html`) para roteamento.</li>
+            </ul>
+        </section>
+        
+        <section class="border border-gray-200 p-6 rounded-lg bg-gray-50 mb-8">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">1. Upload do Arquivo de Dados (.xlsx, .csv)</h2>
+            
+
+            <input 
+                type="file" 
+                id="file-upload" 
+                accept=".xlsx, .xls, .csv" 
+                onchange="handleFileUpload(event)"
+                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+            />
+        </section>
+
+        <!-- Área de Preview -->
+        <section id="preview-section" class="hidden">
+            <h2 class="text-2xl font-bold text-gray-700 pb-2 border-b border-gray-200 pt-6 mb-4">2. Pré-visualização dos Dados Importados</h2>
+            
+            <div id="kpi-preview" class="mb-8"></div>
+            <div id="chart-preview" class="mb-8"></div>
+
+            <div class="mt-8 flex justify-end items-center">
+                <span id="save-message" class="text-sm text-green-600 font-medium opacity-0 transition-opacity duration-300 mr-4">Dados Salvos!</span>
+                <button id="save-button" onclick="saveImportedData()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-lg">
+                    Salvar Dados na Dashboard
+                </button>
+            </div>
+        </section>
+
+        <div class="mt-8 pt-6 border-t border-gray-200">
+            <a href="index.html" class="text-indigo-600 hover:text-indigo-800 font-medium mt-2 block">
+                → Voltar para a Dashboard!
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY_PREFIX_KPI = 'kpi_';
+        const STORAGE_KEY_PREFIX_CHART = 'chart_';
+        const FILTERS_STORAGE_KEY = 'dashboardFilters'; // Mantido para consistência.
+
+        let importedKpiData = {}; // Armazena KPIs agrupados por PageID
+        let importedChartData = {}; // Armazena dados de gráficos agrupados por PageID
+
+        // =================================================================
+        // ESTRUTURA E MAPAS DE DADOS ESPERADOS (MOCK)
+        // =================================================================
+
+        // O editor V2 não usa initialData para carregar, mas precisa dele como fallback
+        // para garantir a estrutura de dados de gráfico no caso de uma Sheet2 vazia.
+        function getInitialChartData() {
+             return {
+                monthlyLimits: {
+                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'],
+                    values: Array(12).fill(0), 
+                    limit: 75
+                },
+                weeklyActivities: {
+                    labels: ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'],
+                    mockValues: Array(7).fill(0)
+                },
+                semestreActivities: {
+                    labels: ['J', 'F', 'M', 'A', 'M', 'J'],
+                    mockValues: Array(6).fill(0)
+                }
+            };
+        }
+
+        // =================================================================
+        // FUNÇÕES DE UTILIDADE E PROCESSAMENTO
+        // =================================================================
+
+        function calculatePercentage(current, total) {
+            if (total === 0 || isNaN(total)) return 0;
+            return Math.min(100, Math.round((current / total) * 100));
+        }
+        
+        /**
+         * Processa a Sheet1 (KPIs) e agrupa os dados por PageID.
+         */
+        function processKpiSheet(data) {
+            const groupedKpis = {};
+            
+            for (const row of data) {
+                const pageId = row.PageID ? row.PageID.toLowerCase().trim() : null;
+                
+                if (!pageId) continue;
+
+                const current = parseInt(row.Atual) || 0;
+                const total = parseInt(row.Total) || 1; 
+
+                const kpi = {
+                    id: parseInt(row.ID) || crypto.randomUUID(), // Usando ID da planilha ou gerando novo
+                    title: row.Titulo || 'Card Sem Título',
+                    current: current,
+                    total: total,
+                    percentage: calculatePercentage(current, total),
+                    specialty: row.Especialidade || 'Todos',
+                    subspecialty: row.Subespecialidade || 'Todos',
+                    module: row.Modulo || 'Todos',
+                };
+                
+                if (!groupedKpis[pageId]) {
+                    groupedKpis[pageId] = [];
+                }
+                groupedKpis[pageId].push(kpi);
+            }
+            return groupedKpis;
+        }
+        
+        /**
+         * Processa a Sheet2 (Gráficos) e agrupa os dados por PageID.
+         */
+        function processChartSheet(data) {
+            const groupedCharts = {};
+            const initialChartStructure = getInitialChartData();
+            
+            for (const row of data) {
+                const pageId = row.PageID ? row.PageID.toLowerCase().trim() : null;
+                if (!pageId) continue;
+                
+                // Cria uma cópia da estrutura inicial para a página
+                let chartData = JSON.parse(JSON.stringify(initialChartStructure));
+
+                // Mapeamento de Limites Mensais (12 Barras)
+                const monthKeys = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'];
+                chartData.monthlyLimits.values = monthKeys.map(key => {
+                    const value = parseInt(row[`LIM_${key}`]);
+                    return Math.min(100, Math.max(0, value)) || 0;
+                });
+                chartData.monthlyLimits.limit = parseInt(row.LIMITE) || 75;
+                
+                // Mapeamento de Atividades da Semana (7 Pontos: 1 a 7)
+                for (let i = 0; i < 7; i++) {
+                    const value = parseInt(row[`ATIV_SEM_${i + 1}`]);
+                    chartData.weeklyActivities.mockValues[i] = value || 0;
+                }
+
+                // Mapeamento de Atividades do 1º Semestre (6 Pontos: 8 a 13)
+                for (let i = 0; i < 6; i++) {
+                    const value = parseInt(row[`ATIV_SEM_${i + 8}`]);
+                    chartData.semestreActivities.mockValues[i] = value || 0;
+                }
+                
+                groupedCharts[pageId] = chartData;
+            }
+            return groupedCharts;
+        }
+
+        // =================================================================
+        // MANIPULADOR DE UPLOAD
+        // =================================================================
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Zera os dados importados antes de processar
+            importedKpiData = {};
+            importedChartData = {};
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                const kpiSheetName = workbook.SheetNames[0]; // Assumindo Sheet1
+                const chartSheetName = workbook.SheetNames[1]; // Assumindo Sheet2
+
+                // 1. Processar KPIs (Sheet1)
+                if (kpiSheetName) {
+                    const kpiSheet = workbook.Sheets[kpiSheetName];
+                    // Usar o cabeçalho da planilha (header: 1) e depois ignorar a primeira linha se for o cabeçalho
+                    const kpiDataRaw = XLSX.utils.sheet_to_json(kpiSheet, { header: 1 });
+                    
+                    // Se o cabeçalho for a primeira linha, pulamos ele
+                    if (kpiDataRaw.length > 0 && kpiDataRaw[0].includes('PageID')) {
+                         const header = kpiDataRaw[0];
+                         const dataRows = kpiDataRaw.slice(1).map(row => {
+                             const obj = {};
+                             header.forEach((key, index) => {
+                                 obj[key] = row[index];
+                             });
+                             return obj;
+                         });
+                         importedKpiData = processKpiSheet(dataRows);
+                    } else {
+                        console.error("Sheet1 inválida ou vazia.");
+                    }
+                }
+
+                // 2. Processar Gráficos (Sheet2)
+                if (chartSheetName) {
+                    const chartSheet = workbook.Sheets[chartSheetName];
+                    const chartDataRaw = XLSX.utils.sheet_to_json(chartSheet, { header: 1 });
+
+                     if (chartDataRaw.length > 0 && chartDataRaw[0].includes('PageID')) {
+                        const header = chartDataRaw[0];
+                        const dataRows = chartDataRaw.slice(1).map(row => {
+                            const obj = {};
+                            header.forEach((key, index) => {
+                                obj[key] = row[index];
+                            });
+                            return obj;
+                        });
+                        importedChartData = processChartSheet(dataRows);
+                    }
+                }
+                
+                renderPreview(importedKpiData, importedChartData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // =================================================================
+        // RENDERIZAÇÃO DE PREVIEW (Auxiliar)
+        // =================================================================
+
+        function renderKpiPreview(groupedData) {
+            const kpiPreview = document.getElementById('kpi-preview');
+            let html = '<h3 class="text-xl font-semibold mb-3">KPIs Importados (Sheet1)</h3>';
+            let totalKpis = 0;
+            
+            for (const pageId in groupedData) {
+                const data = groupedData[pageId];
+                totalKpis += data.length;
+                
+                html += `<h4 class="text-lg font-medium mt-4 mb-2 text-indigo-700">Página: ${pageId} (${data.length} KPIs)</h4>`;
+                html += `
+                    <table class="data-table w-full bg-white rounded-lg shadow-sm">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-700">
+                                <th>ID</th><th>Título</th><th>Atual/Total</th><th>%</th><th>Especialidade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                data.forEach(kpi => {
+                    html += `
+                        <tr>
+                            <td>${kpi.id}</td>
+                            <td>${kpi.title}</td>
+                            <td>${kpi.current} / ${kpi.total}</td>
+                            <td class="font-bold" style="color: #00AEEF;">${kpi.percentage}%</td>
+                            <td>${kpi.specialty}</td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table>';
+            }
+            
+            kpiPreview.innerHTML = html;
+            if (totalKpis === 0) {
+                 kpiPreview.innerHTML = '<p class="text-red-500">Nenhum dado de KPI válido encontrado na Sheet1.</p>';
+            }
+        }
+
+        function renderChartPreview(groupedData) {
+            const chartPreview = document.getElementById('chart-preview');
+            let html = '<h3 class="text-xl font-semibold mb-3">Dados de Gráfico Importados (Sheet2)</h3>';
+            let chartCount = 0;
+
+            for (const pageId in groupedData) {
+                const data = groupedData[pageId];
+                chartCount++;
+                
+                const monthlyLimitsHtml = data.monthlyLimits.labels.map((l, i) => 
+                    `<span class="inline-block p-1 bg-indigo-50 rounded-md text-xs">${l}: <strong>${data.monthlyLimits.values[i]}%</strong></span>`
+                ).join(' ');
+
+                html += `
+                    <h4 class="text-lg font-medium mt-4 mb-2 text-indigo-700">Página: ${pageId}</h4>
+                    <div class="bg-white p-4 rounded-lg border border-gray-200 space-y-3">
+                        <p><strong>Limite Mensal (Linha Alvo):</strong> ${data.monthlyLimits.limit}</p>
+                        <div>
+                            <p class="font-semibold mb-1">Limites Mensais (Barras):</p>
+                            <div class="flex flex-wrap gap-2">${monthlyLimitsHtml}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            chartPreview.innerHTML = html;
+            if (chartCount === 0) {
+                 chartPreview.innerHTML = '<p class="text-red-500">Nenhum dado de Gráfico válido encontrado na Sheet2.</p>';
+            }
+        }
+
+        function renderPreview(kpiData, chartData) {
+            document.getElementById('preview-section').classList.remove('hidden');
+            renderKpiPreview(kpiData);
+            renderChartPreview(chartData);
+        }
+
+        // =================================================================
+        // FUNÇÃO SALVAR DADOS
+        // =================================================================
+
+        function saveImportedData() {
+            if (Object.keys(importedKpiData).length === 0 && Object.keys(importedChartData).length === 0) {
+                alert("Erro: Não há dados válidos para salvar. Por favor, carregue um arquivo Excel.");
+                return;
+            }
+
+            let successfulSaves = 0;
+
+            // Salva KPIs por página
+            for (const pageId in importedKpiData) {
+                localStorage.setItem(STORAGE_KEY_PREFIX_KPI + pageId, JSON.stringify(importedKpiData[pageId]));
+                successfulSaves++;
+            }
+            
+            // Salva Gráficos por página
+            for (const pageId in importedChartData) {
+                 localStorage.setItem(STORAGE_KEY_PREFIX_CHART + pageId, JSON.stringify(importedChartData[pageId]));
+                 if (!importedKpiData[pageId]) {
+                    successfulSaves++; // Conta como sucesso mesmo se for só gráfico
+                 }
+            }
+
+            if (successfulSaves > 0) {
+                const saveMessage = document.getElementById('save-message');
+                saveMessage.textContent = `Dados de ${successfulSaves} página(s) salvos com sucesso!`;
+                saveMessage.classList.remove('opacity-0');
+                setTimeout(() => {
+                    saveMessage.classList.add('opacity-0');
+                }, 4000);
+            } else {
+                alert("Nenhuma página válida com dados encontrados para salvar.");
+            }
+
+            console.log("Dados multipágina salvos com sucesso no localStorage!");
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Inicialização, se necessário
+            document.getElementById('save-button').disabled = false;
+        });
+    </script>
+</body>
+</html>

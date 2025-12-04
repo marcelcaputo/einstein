@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - EAD Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .btn-primary {
+            background-color: #2563EB;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen font-sans">
+    <div class="bg-white p-10 rounded-xl shadow-2xl w-full max-w-sm text-center">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">Controle de Acesso</h1>
+        
+        <p id="auth-status" class="text-lg mb-6"></p>
+
+        <button id="auth-button" class="btn-primary w-full"></button>
+
+        <a href="index.html" class="block mt-6 text-indigo-600 hover:text-indigo-800 text-sm">
+            ← Voltar para a Dashboard
+        </a>
+    </div>
+
+    <script>
+        const AUTH_KEY = 'isLoggedIn';
+
+        function checkAuthStatus() {
+            return localStorage.getItem(AUTH_KEY) === 'true';
+        }
+
+        function toggleAuth() {
+            const status = checkAuthStatus();
+            if (status) {
+                // Logout
+                localStorage.setItem(AUTH_KEY, 'false');
+            } else {
+                // Login
+                localStorage.setItem(AUTH_KEY, 'true');
+            }
+            // CORREÇÃO: Usar window.location.replace() para forçar o redirecionamento
+            // e evitar erros de sintaxe em caminhos relativos
+            window.location.replace('index.html'); 
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const isLoggedIn = checkAuthStatus();
+            const statusElement = document.getElementById('auth-status');
+            const button = document.getElementById('auth-button');
+
+            if (isLoggedIn) {
+                statusElement.textContent = "Você está logado.";
+                statusElement.classList.add('text-green-600');
+                button.textContent = "Sair (Logout)";
+            } else {
+                statusElement.textContent = "Você está deslogado.";
+                statusElement.classList.add('text-red-600');
+                button.textContent = "Entrar (Login)";
+            }
+
+            button.addEventListener('click', toggleAuth);
+        });
+    </script>
+</body>
+</html>

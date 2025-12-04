@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EAD - Dashboard Prepara</title>
+  <link rel="icon" href="favicon.png" type="image/png">
+  <!-- Carrega o Tailwind CSS via CDN para os estilos -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Estilos customizados para a sidebar fixa e transições */
+    #sidebar {
+      width: 240px;
+      padding-top: 20px;
+    }
+
+    .logo {
+      width: 95%;
+    }
+
+    nav {
+      padding-top: 10px;
+    }
+
+    main {
+      margin-left: 240px;
+    }
+
+    /* Garantir que a animação de recolhimento seja suave */
+    .general-data-container {
+      transition: all 0.5s ease-in-out;
+      max-height: 1000px;
+      /* Grande o suficiente para o conteúdo visível */
+      overflow: hidden;
+    }
+
+    .general-data-container.hidden {
+      max-height: 0;
+    }
+
+    .rotate-180 {
+    	transform: rotate(180deg);
+    }
+
+    /* Estilo para destacar o filtro ativo no header */
+    .filter-active {
+      background-color: #f0f9ff;
+      /* Fundo levemente azulado para indicar ativo */
+      font-weight: 600;
+    }
+
+    /* Esconde o menu de opções por padrão */
+    .menu-options {
+      display: none;
+    }
+
+    /* Mostrar o menu quando a classe 'active' estiver presente */
+    .menu-options.active {
+      display: block;
+    }
+
+    /* CORREÇÃO CRÍTICA: Esconde a seta padrão do navegador nos campos de seleção */
+    .header-filter {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-image: none;
+      /* Garante que não haja imagem de fundo nativa */
+    }
+    
+    /* Adiciona transição base para todos os cards (melhora o efeito hover de sombra) */
+    .card-base {
+        transition: box-shadow 0.3s ease-in-out, transform 0.1s ease-out;
+    }
+    .card-base:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg simulado no hover */
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 font-sans">
+
+  <!-- Sidebar (Fixo) -->
+  <div id="sidebar" class="bg-white border-r border-gray-200 h-screen fixed top-0 left-0 z-30 flex flex-col shadow-xl">
+    <!-- O conteúdo da sidebar será injetado pelo JavaScript -->
+  </div>
+
+  <!-- Conteúdo Principal -->
+  <main id="main-content" class="flex-1 p-4 sm:p-6">
+    <!-- O conteúdo principal (Header, KPIs, Gráficos) será injetado aqui -->
+  </main>
+
+
+  <script>
+    // =================================================================
+    // 1. DADOS E CHAVES DE ARMAZENAMENTO
+    // =================================================================
+
+    const AZURE_COLOR = '#004f92'; // Azul Royal/Vibrante (Topo do gradiente)
+    const VIOLET_DARK = '#4F21B9'; // Base escura do gradiente da barra
+    const GRAY = '#6E6E6E'; // Base escura do gradiente da barra
+    const VIOLET_LIGHT = '#D38CFB'; // Cor suave para linha tracejada
+    const VIOLET_GRADIENT_END = '#D38CFB'; // Cor vibrante do topo da barra
+    const FILTERS_STORAGE_KEY_SUFFIX = 'filters';
+    const DATE_STORAGE_KEY_BASE = 'lastUpdateDate'; // Chave base para a data
+    const AUTH_KEY = 'isLoggedIn'; // CHAVE DE AUTENTICAÇÃO
+
+    // Definições de Filtro (DEVE SER IDÊNTICO AO EDITOR)
+    const FILTER_DEFINITIONS = {
+      specialty: { title: "Especialidade", options: ["Todos", "Cardiologia", "Pediatria", "Neurologia"] },
+      subspecialty: { title: "Subespecialidade", options: ["Todos", "Clínica Geral", "Emergência", "Cirurgia"] },
+      module: { title: "Módulo", options: ["Todos", "Módulo A", "Módulo B", "Módulo C"] }
+    };
+
+    // --- Funções Auxiliares de URL e Storage ---
+
+    function getUrlParameter(name) {
+      name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+      const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+      const results = regex.exec(location.search);
+      return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+    }
+
+    // Determina o Page ID (usando o parâmetro 'page' se existir)
+    const currentURLPage = window.location.pathname.split('/').pop();
+    const FILE_ID = getUrlParameter('page') || currentURLPage;
+
+    // Chaves dinâmicas para carregar os dados
+    const STORAGE_KEY_KPI = `kpi_${FILE_ID}`;
+    const CHART_STORAGE_KEY_CHART = `chart_${FILE_ID}`;
+    const DATE_KEY = `${DATE_STORAGE_KEY_BASE}_${FILE_ID}`; // CHAVE DINÂMICA DA DATA
+
+    // Dados Iniciais (Fallback)
+    const initialKpiData = [
+      { id: 1, title: 'Material para Gravação', current: 102, total: 600, percentage: 17, specialty: "Cardiologia", subspecialty: "Clínica Geral", module: "Módulo A" },
+      { id: 2, title: 'Agendamento', current: 106, total: 600, percentage: 18, specialty: "Cardiologia", subspecialty: "Emergência", module: "Módulo B" },
+      { id: 3, title: 'Edição', current: 89, total: 600, percentage: 15, specialty: "Pediatria", subspecialty: "Clínica Geral", module: "Módulo C" },
+      { id: 4, title: 'Total de Vídeos', current: 70, total: 600, percentage: 12, specialty: "Pediatria", subspecialty: "Emergência", module: "Módulo A" },
+      { id: 5, title: 'Total de Flashcards', current: 119, total: 2500, percentage: 5, specialty: "Neurologia", subspecialty: "Cirurgia", module: "Módulo B" },
+      { id: 6, title: 'Total de Questões', current: 377, total: 3000, percentage: 11, specialty: "Neurologia", subspecialty: "Clínica Geral", module: "Módulo C" },
+      { id: 7, title: 'Total de Mapas Conceituais', current: 8, total: 100, percentage: 8, specialty: "Todos", subspecialty: "Todos", module: "Módulo A" },
+      { id: 8, title: 'Total de Apostilas', current: 112, total: 173, percentage: 65, specialty: "Cardiologia", subspecialty: "Emergência", module: "Módulo B" },
+      { id: 9, title: 'Conteúdo Cadastrado', current: 69, total: 6373, percentage: 1, specialty: "Pediatria", subspecialty: "Cirurgia", module: "Módulo C" },
+    ];
+
+    const initialChartData = {
+      monthlyLimits: {
+        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'],
+        values: [40, 70, 90, 50, 100, 60, 30, 80, 55, 75, 45, 65],
+        limit: 75
+      },
+      weeklyActivities: {
+        labels: ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'],
+        mockValues: [20, 15, 25, 18, 30, 22, 19]
+      },
+      semestreActivities: {
+        labels: ['J', 'F', 'M', 'A', 'M', 'J'],
+        mockValues: [5, 7, 3, 9, 6, 11]
+      },
+      // NOVO: DADOS PARA O PROGRESSO DETALHADO (Sincronizado com editor.html)
+      detailedProgress: {
+          titleCard1: 'Métricas de Produção', // Título editável
+          titleCard2: 'Novo Conteúdo vs. Revisão', // Título editável
+          productionMetrics: [
+              { label: 'Total de Imagens Produzidas', value: 322, color: '#38A169' },
+              { label: 'Ajustes', value: 54, color: '#90EE90' },
+              { label: 'Novas', value: 268, color: '#50C878' },
+              { label: 'Análise', value: 0, color: '#C0C0C0' }
+          ],
+          // ESTRUTURA ATUALIZADA
+          reviewMetrics: [
+              { label: 'Novo', value: 130, color: '#38A169' }, 
+              { label: 'Atualização', value: 72, color: '#FCD34D' }
+          ]
+      }
+    };
+
+    const initialFilterStatus = {
+      Especialidade: false,
+      Subespecialidade: false,
+      Módulo: false,
+      Todos: true,
+    };
+
+    let currentFilterValues = {
+      specialty: 'Todos',
+      subspecialty: 'Todos',
+      module: 'Todos'
+    };
+
+
+    // --- Funções de Carregamento ---
+
+    function loadKpiData() {
+      const storedData = localStorage.getItem(STORAGE_KEY_KPI);
+      let data = storedData ? JSON.parse(storedData) : initialKpiData;
+      return data.map(item => ({
+        ...item,
+        specialty: item.specialty || "Todos",
+        subspecialty: item.subspecialty || "Todos",
+        module: item.module || "Todos",
+      }));
+    }
+
+    function loadChartData() {
+      const storedData = localStorage.getItem(CHART_STORAGE_KEY_CHART);
+      let data = storedData ? JSON.parse(storedData) : initialChartData;
+      
+      // Garante que detailedProgress exista, usando fallback se necessário
+      if (!data.detailedProgress) {
+          data.detailedProgress = initialChartData.detailedProgress;
+          return data;
+      } 
+      
+      // Garante que a estrutura interna exista (útil se o dado for antigo)
+      // Fallback para productionMetrics
+      if (!data.detailedProgress.productionMetrics) {
+          data.detailedProgress.productionMetrics = initialChartData.detailedProgress.productionMetrics;
+      }
+      
+      // Fallback para reviewMetrics e conversão da estrutura antiga (novoValor/atualizacaoValor)
+      if (!data.detailedProgress.reviewMetrics) {
+          if (data.detailedProgress.novoValor !== undefined && data.detailedProgress.atualizacaoValor !== undefined) {
+              // Converte a estrutura antiga para a nova (mantendo as cores do fallback)
+              data.detailedProgress.reviewMetrics = [
+                  { label: 'Novo', value: data.detailedProgress.novoValor, color: initialChartData.detailedProgress.reviewMetrics[0].color },
+                  { label: 'Atualização', value: data.detailedProgress.atualizacaoValor, color: initialChartData.detailedProgress.reviewMetrics[1].color }
+              ];
+              // Opcional: Limpar campos antigos para manter a estrutura limpa
+              delete data.detailedProgress.novoValor;
+              delete data.detailedProgress.atualizacaoValor;
+          } else {
+              // Se não houver dados antigos, usa o fallback inicial
+              data.detailedProgress.reviewMetrics = initialChartData.detailedProgress.reviewMetrics;
+          }
+      }
+      
+      // Adiciona fallback para os títulos
+      if (data.detailedProgress.titleCard1 === undefined) {
+          data.detailedProgress.titleCard1 = initialChartData.detailedProgress.titleCard1;
+      }
+      if (data.detailedProgress.titleCard2 === undefined) {
+          data.detailedProgress.titleCard2 = initialChartData.detailedProgress.titleCard2;
+      }
+      
+      return data;
+    }
+
+    function loadFilterStatus() {
+      const storedData = localStorage.getItem(FILTERS_STORAGE_KEY_SUFFIX);
+      return storedData ? JSON.parse(storedData) : initialFilterStatus;
+    }
+
+    // NOVO: Função para carregar a data da última modificação
+    function loadLastUpdateDate() {
+      // Carrega a data salva no localStorage (que é atualizada no editor)
+      return localStorage.getItem(DATE_KEY) || 'Nenhuma modificação salva';
+    }
+
+    // NOVO: Verifica o status de login
+    function checkAuthStatus() {
+      return localStorage.getItem(AUTH_KEY) === 'true';
+    }
+
+
+    // Carrega os dados
+    const kpiData = loadKpiData();
+    const chartData = loadChartData();
+    const filterStatus = loadFilterStatus();
+    const lastUpdateDate = loadLastUpdateDate(); // Carrega a data
+
+    let showGeneralData = true;
+
+    // =================================================================
+    // 2. FUNÇÕES AUXILIARES (ÍCONES SVG)
+    // =================================================================
+
+    const getCheckCircleIcon = () => `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${AZURE_COLOR}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500 w-5 h-5 mr-2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+        `;
+
+    const getSidebarIcon = (active) => `
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 ${active ? 'text-white' : 'text-indigo-600'}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+        `;
+
+    // Ícone de Login/Logout
+    const getLoginIcon = (isLoggedIn) => isLoggedIn ? `
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+            </svg>
+        ` : `
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+            </svg>
+        `;
+
+    const getSettingsIcon = () => `
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+        `;
+
+    // FUNÇÃO DE LOGO - Carrega o arquivo logo.png da mesma pasta
+    const getLogoSvg = () => `
+            <img src="logo.png" alt="Logo Einstein">
+        `;
+
+    // =================================================================
+    // 3. RENDERIZAÇÃO E LÓGICA DE FILTRAGEM
+    // =================================================================
+
+    function createFilterOptions(options, idKey) {
+      const uniqueOptions = [...new Set(options)].sort();
+      return uniqueOptions.map(option => `
+                <option value="${option}" ${option === currentFilterValues[idKey] ? 'selected' : ''}>
+                    ${option}
+                </option>
+            `).join('');
+    }
+
+    function renderHeader() {
+      const filterKeys = Object.keys(FILTER_DEFINITIONS);
+
+      // Carrega a data de atualização específica da página
+      const displayedDate = loadLastUpdateDate();
+
+
+      const dropdownsHtml = filterKeys.map(key => {
+        const definition = FILTER_DEFINITIONS[key];
+
+        const kpiOptions = kpiData.map(kpi => kpi[key]);
+        const allOptions = [...definition.options, ...kpiOptions].filter((v, i, a) => a.indexOf(v) === i);
+
+        const isActive = filterStatus[definition.title] || false;
+
+        return `
+                    <div class="flex flex-col text-left mr-4">
+                        <span class="text-xs font-semibold text-gray-500 mb-1">${definition.title}</span>
+                        
+                        <div class="relative inline-block">
+                            <select 
+                                id="filter-select-${key}"
+                                data-filter-key="${key}"
+                                onchange="handleFilterChange(this)"
+                                class="header-filter bg-white text-sm font-medium cursor-pointer py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 ${isActive ? 'filter-active' : ''}"
+                                style="min-width: 200px; border: 1px solid ${AZURE_COLOR}; border-radius: 8px;"
+                            >
+                                ${createFilterOptions(allOptions, key)}
+                            </select>
+                            
+                            <div class="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center">
+                                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="${AZURE_COLOR}">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                `;
+      }).join('');
+
+      return `
+                <header class="mb-6 pb-4 border-b border-gray-200">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between">
+                        <div class="mb-4 md:mb-0">
+                            <!-- AGORA EXIBE A DATA CARREGADA DO LOCAL STORAGE -->
+                            <p class="text-xs text-gray-500 mt-1">Atualizado em: ${displayedDate}</p>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            ${dropdownsHtml}
+                        </div>
+                    </div>
+                </header>
+            `;
+    }
+
+    function filterAndRenderKpis() {
+      // ... restante da função filterAndRenderKpis
+      const kpiContainer = document.getElementById('kpi-container');
+      if (!kpiContainer) return;
+
+      const filteredKpis = kpiData.filter(kpi => {
+        let matchesSpecialty = currentFilterValues.specialty === 'Todos' || kpi.specialty === currentFilterValues.specialty;
+        let matchesSubspecialty = currentFilterValues.subspecialty === 'Todos' || kpi.subspecialty === currentFilterValues.subspecialty;
+        let matchesModule = currentFilterValues.module === 'Todos' || kpi.module === currentFilterValues.module;
+
+        return matchesSpecialty && matchesSubspecialty && matchesModule;
+      });
+
+      kpiContainer.innerHTML = filteredKpis.map(metric => `
+                <!-- CLASSE shadow-sm E card-base ADICIONADAS AQUI -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
+                    <div class="flex items-center mb-4">
+                        ${getCheckCircleIcon()}
+                        <span class="text-sm font-semibold text-gray-800">${metric.title}</span>
+                    </div>
+                    <div class="relative pt-1">
+                        <div class="flex mb-1 items-center justify-between">
+                            <span class="text-xs font-semibold inline-block" style="color: ${AZURE_COLOR};">
+                                ${metric.percentage}%
+                            </span>
+                            <span class="text-xs font-medium text-gray-500">
+                                ${metric.current} / ${metric.total}
+                            </span>
+                        </div>
+                        <div class="overflow-hidden h-2 mb-4 text-xs flex rounded-full bg-blue-100">
+                            <div 
+                                style="width: ${metric.percentage}%; background-color: ${AZURE_COLOR};" 
+                                class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center rounded-l-full"
+                            ></div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+    }
+
+    function renderKPICards() {
+      return `<section id="kpi-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8"></section>`;
+    }
+
+    function handleFilterChange(selectElement) {
+      const key = selectElement.getAttribute('data-filter-key');
+      currentFilterValues[key] = selectElement.value;
+      filterAndRenderKpis();
+    }
+
+    // =================================================================
+    // 4. LÓGICA DO GRÁFICO DE BARRAS (Limites Mensais)
+    // =================================================================
+
+    function createMonthlyLimitsChart() {
+      const dataValues = chartData.monthlyLimits.values;
+      const labels = chartData.monthlyLimits.labels;
+      const limitHeight = chartData.monthlyLimits.limit;
+
+      let barsHtml = labels.map((label, index) => {
+        const height = dataValues[index];
+        return `
+                    <div 
+                        data-index="${index}"
+                        data-value="${dataValues[index]}%"
+                        class="flex flex-col items-center h-full justify-end w-6 sm:w-8 mx-1 relative chart-bar"
+                    >
+                        <div id="tooltip-${index}" class="absolute bottom-full transform -translate-y-2 px-2 py-1 rounded-md text-white shadow-lg pointer-events-none z-10 hidden" style="background-color: ${VIOLET_DARK};">
+                            <span class="text-xs font-bold">${dataValues[index]}%</span>
+                            <div class="absolute w-0 h-0 border-x-4 border-t-4 transform -translate-x-1/2" style="bottom: -4px; left: 50%; border-top-color: ${VIOLET_DARK}; border-left-color: transparent; border-right-color: transparent; border-bottom-color: transparent;"></div>
+                        </div>
+                        <div
+                            class="rounded-t-lg transition-all duration-300 ease-out hover:shadow-lg w-full"
+                            style="background: linear-gradient(to top, ${VIOLET_DARK}, ${VIOLET_GRADIENT_END}); height: ${dataValues[index]}%;"
+                        ></div>
+                    </div>
+                `;
+      }).join('');
+
+      // CLASSE shadow-sm E card-base ADICIONADAS AQUI
+      return `
+                <div class="bg-white p-6 rounded-xl shadow-sm card-base h-96 flex flex-col hover:shadow-lg">
+                    <h3 class="text-lg font-semibold text-gray-800">Limites mensais</h3>
+                    <div class="text-sm text-gray-500 mb-2">Limite</div>
+                    <div id="monthly-limits-chart-area" class="flex-grow flex items-end justify-around p-5 bg-gray-50 rounded-lg relative">
+                        <div class="absolute left-0 right-0 border-t-2 border-dashed"
+                            style="bottom: ${limitHeight}%; border-color: ${VIOLET_LIGHT}; height: 2px; width: 100%;">
+                        </div>
+                        ${barsHtml}
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-600 mt-2 px-2">
+                        ${labels.map(m => `<span class="flex-1 text-center font-semibold">${m}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+    }
+
+    function setupBarChartInteractivity() {
+      const chartArea = document.getElementById('monthly-limits-chart-area');
+      if (!chartArea) return;
+
+      chartArea.querySelectorAll('.chart-bar').forEach(bar => {
+        const index = bar.getAttribute('data-index');
+        const tooltip = document.getElementById(`tooltip-${index}`);
+
+        bar.addEventListener('mouseenter', () => {
+          if (tooltip) tooltip.classList.remove('hidden');
+        });
+        bar.addEventListener('mouseleave', () => {
+          if (tooltip) tooltip.classList.add('hidden');
+        });
+      });
+    }
+
+
+    // 5. LÓGICA DOS GRÁFICOS DE LINHA (Atividades)
+
+    const Y_BASE = 140;
+    const Y_MAX_POINT = 35;
+    const MAX_SCALE_VALUE = 40;
+
+    function convertValueToSvgY(value) {
+      const PLOTTING_HEIGHT = Y_BASE - Y_MAX_POINT;
+      const clampedValue = Math.min(MAX_SCALE_VALUE, value);
+      return Y_BASE - (clampedValue / MAX_SCALE_VALUE * PLOTTING_HEIGHT);
+    }
+
+    function generateSvgPoints(values) {
+      const numPoints = values.length;
+      if (numPoints === 0) return "";
+      let points = [];
+      const TOTAL_WIDTH = 300;
+      const H_PADDING = 10;
+      const PLOTTING_WIDTH = TOTAL_WIDTH - (2 * H_PADDING);
+      const step = PLOTTING_WIDTH / (numPoints - 1);
+
+      for (let i = 0; i < numPoints; i++) {
+        const x = H_PADDING + i * step;
+        const y = convertValueToSvgY(values[i]);
+        points.push(`${x},${y}`);
+      }
+      return points.join(' ');
+    }
+
+    function generateGridLinesAndLabels() {
+      // Apenas a linha de base X
+      return `<line x1="0" y1="140" x2="300" y2="140" stroke="#ddd" stroke-width="1" />`;
+    }
+
+    function createTaskLineChartMock(title) {
+      let data;
+      if (title === "Atividades da semana") {
+        data = chartData.weeklyActivities;
+      } else if (title === "Atividades do 1º semestre") {
+        data = chartData.semestreActivities;
+      } else {
+        return "";
+      }
+
+      const labels = data.labels;
+      const mockValues = data.mockValues;
+      const points = generateSvgPoints(mockValues);
+
+      const coords = points.split(' ').map(p => {
+        const [x, y] = p.split(',');
+        return { x: parseFloat(x), y: parseFloat(y) };
+      });
+
+      const pointsHtml = coords.map((coord, index) => {
+        return `
+                    <g data-index="${index}" data-value="${mockValues[index]}" transform="translate(${coord.x}, ${coord.y})" class="line-chart-point">
+                        <circle cx="0" cy="0" r="15" fill="transparent" cursor="pointer" />
+                        <circle id="${title.replace(/\s/g, '-')}-circle-${index}" cx="0" cy="0" r="3" fill="white" stroke="${VIOLET_DARK}" stroke-width="2" class="transition-all duration-150" />
+                        <g id="${title.replace(/\s/g, '-')}-tooltip-${index}" class="hidden">
+                            <rect x="-10" y="-30" width="20" height="20" rx="3" fill="${VIOLET_DARK}" />
+                            <text x="0" y="-18" text-anchor="middle" fill="white" font-size="8" font-weight="bold">${mockValues[index]}</text>
+                            <polygon points="0,-10 -3,0 3,0" fill="${VIOLET_DARK}" transform="translate(0, -10)"/>
+                        </g>
+                    </g>
+                `;
+      }).join('');
+
+      // CLASSE shadow-sm E card-base ADICIONADAS AQUI
+      return `
+                <div class="bg-white p-6 rounded-xl shadow-sm card-base h-96 flex flex-col hover:shadow-lg">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">${title}</h3>
+                    <div id="${title.replace(/\s/g, '-')}-chart-area" class="flex-grow flex items-end p-5 bg-gray-50 rounded-lg relative">
+                        <svg viewBox="0 0 300 150" class="w-full h-full" preserveAspectRatio="none"> 
+                            ${generateGridLinesAndLabels()}
+                            <polyline fill="none" stroke="${VIOLET_DARK}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="${points}" />
+                            ${pointsHtml}
+                        </svg>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-600 mt-2">
+                        ${labels.map(m => `<span class="flex-1 text-center font-semibold">${m}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+    }
+
+    function setupLineChartInteractivity(title) {
+      const chartAreaId = `${title.replace(/\s/g, '-')}-chart-area`;
+      const chartArea = document.getElementById(chartAreaId);
+      if (!chartArea) return;
+
+      chartArea.querySelectorAll('.line-chart-point').forEach(pointGroup => {
+        const index = pointGroup.getAttribute('data-index');
+        const tooltip = document.getElementById(`${title.replace(/\s/g, '-')}-tooltip-${index}`);
+        const circle = document.getElementById(`${title.replace(/\s/g, '-')}-circle-${index}`);
+
+        pointGroup.addEventListener('mouseenter', () => {
+          if (tooltip) tooltip.classList.remove('hidden');
+          if (circle) circle.setAttribute('r', '5');
+        });
+        pointGroup.addEventListener('mouseleave', () => {
+          if (tooltip) tooltip.classList.add('hidden');
+          if (circle) circle.setAttribute('r', '3');
+        });
+      });
+    }
+
+    // =================================================================
+    // NOVO CARD: PROGRESSO SEGMENTADO (Baseado na imagem)
+    // AGORA UTILIZA DADOS CARREGADOS DO chartData e SUPORTA DADOS DINÂMICOS PARA AMBOS OS CARDS
+    // =================================================================
+    function createDetailedProgressCard() {
+        // Busca dados do chartData
+        const detailedData = chartData.detailedProgress;
+        const productionMetrics = detailedData.productionMetrics || [];
+        const reviewMetrics = detailedData.reviewMetrics || []; // NOVO: Métrica de Revisão
+
+        // NOVO: Busca títulos editáveis
+        const titleCard1 = detailedData.titleCard1 || 'Métricas de Produção'; 
+        const titleCard2 = detailedData.titleCard2 || 'Novo Conteúdo vs. Revisão';
+        
+        // --- CÁLCULOS E HTML PARA CARD 1: PRODUÇÃO ---
+        const totalProduction = productionMetrics.reduce((sum, m) => sum + m.value, 0); 
+
+        // 1. Cria as barras de progresso (Card 1)
+        const barsCard1 = productionMetrics.map(metric => {
+            const width = totalProduction > 0 ? ((metric.value / totalProduction) * 100).toFixed(2) : 0; 
+            return `<div style="width: ${width}%; background-color: ${metric.color}; height: 100%;"></div>`;
+        }).join('');
+
+        // 2. Cria a lista de status (Legenda Card 1)
+        const statusListCard1 = productionMetrics.map(metric => {
+            return `
+                <div class="flex items-center space-x-1">
+                    <span class="h-2 w-2 rounded-full" style="background-color: ${metric.color};"></span>
+                    <span class="text-sm font-semibold" style="color: #333333;">${metric.label}</span>
+                    <span class="text-sm font-bold" style="color: #333333;">${metric.value}</span>
+                </div>
+            `;
+        }).join('');
+        
+        // --- CÁLCULOS E HTML PARA CARD 2: REVISÃO ---
+        const totalReview = reviewMetrics.reduce((sum, m) => sum + m.value, 0);
+        
+        // 1. Cria as barras de progresso (Card 2)
+        const barsCard2 = reviewMetrics.map(metric => {
+            const width = totalReview > 0 ? ((metric.value / totalReview) * 100).toFixed(2) : 0; 
+            return `<div style="width: ${width}%; background-color: ${metric.color}; height: 100%;"></div>`;
+        }).join('');
+        
+        // 2. Cria a lista de status (Legenda Card 2) - Exibida em linha para simular o layout original
+        const statusListCard2 = reviewMetrics.map(metric => {
+            const percent = totalReview > 0 ? ((metric.value / totalReview) * 100).toFixed(2) : 0;
+            return `
+                <div class="flex flex-col">
+                    <span style="color: #333333;">${metric.label}</span>
+                    <span class="font-bold" style="color: #333333;">${metric.value} — ${percent}%</span>
+                </div>
+            `;
+        }).join('');
+
+
+        return `
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Card 1: Progresso Segmentado (Métricas de Produção) -->
+                <!-- CLASSE shadow-sm E card-base ADICIONADAS AQUI -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">${titleCard1} (Total: ${totalProduction})</h3>
+                    <div class="flex w-full h-3 rounded-full bg-gray-200 overflow-hidden mb-4">
+                        ${barsCard1}
+                    </div>
+                    <div class="flex justify-between flex-wrap gap-2">
+                        ${statusListCard1}
+                    </div>
+                </div>
+
+                <!-- Card 2: Novo Conteúdo vs. Revisão (Métricas Dinâmicas) -->
+                <!-- CLASSE shadow-sm E card-base ADICIONADAS AQUI -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">${titleCard2} (Total: ${totalReview})</h3>
+                    <div class="flex w-full h-3 rounded-full bg-gray-200 overflow-hidden">
+                        ${barsCard2}
+                    </div>
+                    <div class="flex justify-between text-sm mt-2">
+                        ${statusListCard2}
+                    </div>
+                </div>
+            </section>
+        `;
+    }
+
+
+    // =================================================================
+    // 6. TOGGLE E RENDERIZAÇÃO PRINCIPAL
+    // NOVO: createDetailedProgressCard() movido para o topo de generalDataHtml
+    // =================================================================
+
+    function renderGeneralDataSection() {
+        const generalDataHtml = `
+            <!-- NOVO CARD: PROGRESSO DETALHADO (NOVO TOPO) -->
+            ${createDetailedProgressCard()}
+            
+            <section class="mb-4 mt-8">
+                <!-- CLASSE shadow-sm E card-base ADICIONADAS AQUI -->
+                <div 
+                    id="toggle-header"
+                    class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 card-base hover:shadow-lg transition-colors"
+                    onclick="handleToggleGeneralData()"
+                >
+                    <h2 class="text-lg font-bold text-gray-800">Dados gerais do mês</h2>
+                    <svg id="toggle-arrow" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 transition-transform duration-300 ${showGeneralData ? 'rotate-0' : 'rotate-180'}" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+            </section>
+
+            <section id="charts-container" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 general-data-container ${showGeneralData ? '' : 'hidden'}">
+                ${createMonthlyLimitsChart()}
+                ${createTaskLineChartMock("Atividades da semana")}
+                ${createTaskLineChartMock("Atividades do 1º semestre")}
+            </section>
+        `;
+        const mainContent = document.getElementById('main-content');
+        if (mainContent) {
+            
+            mainContent.innerHTML = ''; // Limpa o conteúdo
+            
+            // 1. Injeta Header e KPIs (conteúdo padrão)
+            mainContent.innerHTML += renderHeader(); 
+            mainContent.innerHTML += renderKPICards(); 
+            
+            // 2. Injeta a seção de progresso detalhado e gráficos (conteúdo da variável generalDataHtml)
+            mainContent.innerHTML += generalDataHtml;
+
+        }
+    }
+
+    function handleToggleGeneralData() {
+      showGeneralData = !showGeneralData;
+      const arrow = document.getElementById('toggle-arrow');
+      const chartsContainer = document.getElementById('charts-container');
+      // O novo card está fora do charts-container, então não é afetado pelo toggle,
+      // a menos que desejemos incluí-lo também, o que exigiria um container pai.
+      // Mantemos a lógica atual, afetando apenas o container de gráficos.
+
+      if (arrow) {
+        arrow.classList.toggle('rotate-180', !showGeneralData);
+      }
+      if (chartsContainer) {
+        chartsContainer.classList.toggle('hidden', !showGeneralData);
+      }
+    }
+
+    function toggleSettingsMenu() {
+      const menu = document.getElementById('settings-options');
+      if (menu) {
+        menu.classList.toggle('active');
+      }
+    }
+
+    function renderSidebar() {
+      // Lógica de ativação: Pega o nome do arquivo atual (ex: 'index.html', 'calendario.html')
+      // CORREÇÃO: Usamos o nome do arquivo raiz (location.pathname.split('/').pop())
+      // ou o parâmetro 'page' se estivermos navegando via ?page=xpto.html
+      const currentURLPage = window.location.pathname.split('/').pop();
+      const currentFile = currentURLPage.startsWith('index.html') ? getUrlParameter('page') || 'index.html' : currentURLPage;
+
+      // Verifica o status de login
+      const isLoggedIn = checkAuthStatus();
+
+      // Definição dos itens de navegação (O 'page' é o nome do arquivo)
+      const navItems = [
+        { name: 'KPI Geral', page: 'index.html' },
+        { name: 'KPI Mês', page: 'kpi-mes.html' },
+        { name: 'Vídeos', page: 'videos.html' },
+        { name: 'Flashcards', page: 'flashcards.html' },
+        { name: 'Questões', page: 'questoes.html' },
+        { name: 'Mapas + Apostila', page: 'mapas.html' },
+        { name: 'Cadastros', page: 'cadastros.html' },
+        { name: 'KPI AV', page: 'kpi-av.html' },
+        { name: 'Status AV', page: 'status-av.html' },
+        { name: 'Calendário', page: 'calendario.html' },
+      ];
+
+      // Renderiza a seção de configurações apenas se estiver logado
+      const settingsSection = isLoggedIn ? `
+                <div class="px-4 py-4 border-t border-gray-100 relative">
+                    <button 
+                        onclick="toggleSettingsMenu()" 
+                        class="flex items-center p-2 w-full text-left rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200 focus:outline-none"
+                    >
+                        ${getSettingsIcon()}
+                        <span class="ml-3 font-medium">Configurações</span>
+                    </button>
+                    
+                    <div id="settings-options" class="menu-options absolute bottom-14 left-0 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+                        <a href="editor.html?page=${currentFile}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            Ir para o editor
+                        </a>
+                        <a href="editor_v2.html?page=${currentFile}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            Escolher o upload
+                        </a>
+                    </div>
+                </div>
+            ` : '';
+
+      // Renderiza o botão de Login/Logout
+      const authButton = `
+                <div class="px-4 py-4 border-t border-gray-100 relative ${isLoggedIn ? 'mt-auto' : ''}">
+                    <a href="login.html" class="flex items-center p-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                        ${getLoginIcon(isLoggedIn)}
+                        <span class="ml-3 font-medium">${isLoggedIn ? 'Logout' : 'Login'}</span>
+                    </a>
+                </div>
+            `;
+
+
+      const sidebarContent = `
+                <div class="flex items-center h-20 px-6 border-b border-gray-100">
+                    ${getLogoSvg()}
+                    
+                </div>
+
+                <nav class="mt-4 space-y-1 px-4 flex-grow">
+                    ${navItems.map(item => {
+        const isActive = item.page === currentFile;
+        const href = item.page === 'index.html' ? item.page : `index.html?page=${item.page}`;
+
+        return `
+                        <a href="${href}" class="flex items-center p-2 rounded-lg text-sm transition-colors duration-200 ${isActive ? 'text-white shadow-lg' : 'text-gray-700 hover:bg-gray-100'
+          }"
+                        style="${isActive ? 'background-color: ' + AZURE_COLOR + ';' : ''}"
+                        >
+                            <span class="ml-3 font-medium">${item.name}</span>
+                        </a>
+                        `;
+      }).join('')}
+                </nav>
+                
+                ${settingsSection}
+                ${authButton}
+            `;
+      document.getElementById('sidebar').innerHTML = sidebarContent;
+
+      document.addEventListener('click', (event) => {
+        const menu = document.getElementById('settings-options');
+        const button = document.querySelector('#sidebar button');
+
+        if (menu && button && !button.contains(event.target) && !menu.contains(event.target)) {
+          menu.classList.remove('active');
+        }
+      });
+    }
+
+    function renderApp() {
+      renderSidebar();
+
+      // NOTA: O renderGeneralDataSection agora cuida de renderizar Header e KPIs também
+      // para garantir a ordem correta de injeção dos novos cards.
+      renderGeneralDataSection();
+
+      filterAndRenderKpis();
+      setupBarChartInteractivity();
+      setupLineChartInteractivity("Atividades da semana");
+      setupLineChartInteractivity("Atividades do 1º semestre");
+    }
+
+    document.addEventListener('DOMContentLoaded', renderApp);
+
+  </script>
+</body>
+
+</html>

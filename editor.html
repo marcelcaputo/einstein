@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EAD - Editor de Dados KPI e Gráficos</title>
+    <!-- Carrega o Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .kpi-card-editor {
+            transition: all 0.2s;
+        }
+        .kpi-card-editor:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transform: translateY(-2px);
+        }
+        .data-input, .select-input {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 4px 8px;
+            width: 100%;
+            text-align: center;
+            font-size: 0.875rem;
+        }
+        .data-label {
+            font-size: 0.75rem;
+            color: #4b5563;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        /* Estilo para simular o clique ativo nos filtros */
+        .filter-checkbox:checked + label {
+            background-color: #00AEEF;
+            color: white;
+            border-color: #00AEEF;
+        }
+        .color-input {
+            width: 100%;
+            height: 32px;
+            border: none;
+            padding: 0;
+            border-radius: 4px;
+        }
+        .metric-row {
+            display: grid;
+            grid-template-columns: 3fr 2fr 1fr auto; /* Label, Value, Color, Button */
+            gap: 8px;
+            align-items: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 sm:p-8 font-sans">
+
+    <div class="max-w-6xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-lg">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Editor de Dados KPI e Gráficos</h1>
+        <p class="text-gray-500 mb-6">Altere os cards KPI, os filtros de especialidade e os pontos de dados dos gráficos. Lembre-se de atualizar o Dashboard após salvar.</p>
+        
+        <!-- SELEÇÃO DE PÁGINA -->
+        <section class="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+            <h2 class="text-xl font-bold text-yellow-800 mb-3">Página de Edição Atual:</h2>
+            <div class="flex items-center space-x-4">
+                <label for="page-select" class="font-medium text-gray-700">Editar Dados para:</label>
+                <!-- CORREÇÃO APLICADA AQUI: Usa window.location.search para mudar apenas o parâmetro de consulta -->
+                <select id="page-select" onchange="window.location.search = '?page=' + this.value" class="select-input w-64 border-yellow-500">
+                    <!-- Options preenchidas por JS -->
+                </select>
+            </div>
+        </section>
+
+        <form id="editor-form" class="space-y-10">
+            
+            <!-- SEÇÃO 1: CARDS KPI -->
+            <h2 class="text-2xl font-bold text-gray-700 pb-2 border-b border-gray-200">1. Dados e Filtros dos Cartões KPI (9 Cards + Dinâmicos)</h2>
+            
+            <div id="kpi-fields" class="space-y-4">
+                <!-- KPI fields will be injected here -->
+            </div>
+            
+            <!-- Botão para adicionar novo card -->
+            <button type="button" onclick="addNewKpiCard()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm shadow-md flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Adicionar Novo Card
+            </button>
+
+
+            <!-- SEÇÃO 2: GRÁFICOS INFERIORES -->
+            <h2 class="text-2xl font-bold text-gray-700 pb-2 border-b border-gray-200 pt-6">2. Dados dos Gráficos (Pontos)</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <!-- GRÁFICO 1: Limites Mensais (12 Barras) -->
+                <div class="md:col-span-1 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h3 class="text-lg font-semibold mb-3">Limites Mensais (12 Meses)</h3>
+                    <div id="limits-chart-fields" class="grid grid-cols-4 gap-2">
+                        <!-- Chart 1 fields will be injected here -->
+                    </div>
+                </div>
+
+                <!-- GRÁFICO 2: Atividades da Semana (7 Pontos) -->
+                <div class="md:col-span-1 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h3 class="text-lg font-semibold mb-3">Atividades da Semana (7 Pontos)</h3>
+                    <div id="weekly-chart-fields" class="grid grid-cols-4 gap-2">
+                        <!-- Chart 2 fields will be injected here -->
+                    </div>
+                </div>
+
+                <!-- GRÁFICO 3: Atividades do 1º Semestre (6 Pontos) -->
+                <div class="md:col-span-1 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h3 class="text-lg font-semibold mb-3">Atividades 1º Semestre (6 Pontos)</h3>
+                    <div id="semestre-chart-fields" class="grid grid-cols-4 gap-2">
+                        <!-- Chart 3 fields will be injected here -->
+                    </div>
+                </div>
+
+            </div>
+
+            
+            <!-- SEÇÃO 3: PROGRESSO DETALHADO (NOVO CARD) -->
+            <h2 class="text-2xl font-bold text-gray-700 pb-2 border-b border-gray-200 pt-6">3. Dados de Progresso Detalhado (Card Novo)</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Card 1: Métricas de Produção (Dinâmico) -->
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h3 class="text-lg font-semibold mb-3">Card 1: Título e Métricas de Produção</h3>
+                    
+                    <!-- TÍTULO CARD 1 -->
+                    <div class="mb-4">
+                        <div class="data-label">Título do Card 1 (Produção)</div>
+                        <input name="titleCard1" type="text" class="data-input text-left" />
+                    </div>
+
+                    <div id="production-metrics-fields" class="space-y-3">
+                        <!-- Production metrics fields will be injected here -->
+                    </div>
+
+                    <!-- Botão de Adicionar Métrica -->
+                    <button type="button" onclick="addProductionMetric('production-metrics-fields', 'prod')" class="mt-4 bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded-lg text-sm transition-colors shadow-md flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Adicionar Métrica
+                    </button>
+                </div>
+
+                <!-- Card 2: Novo vs. Revisão (Dinâmico) -->
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h3 class="text-lg font-semibold mb-3">Card 2: Título e Métricas de Revisão</h3>
+                    
+                    <!-- TÍTULO CARD 2 -->
+                    <div class="mb-4">
+                        <div class="data-label">Título do Card 2 (Revisão)</div>
+                        <input name="titleCard2" type="text" class="data-input text-left" />
+                    </div>
+                    
+                    <div id="review-metrics-fields" class="space-y-3">
+                        <!-- Review metrics fields will be injected here -->
+                    </div>
+
+                     <!-- Botão de Adicionar Métrica -->
+                    <button type="button" onclick="addProductionMetric('review-metrics-fields', 'review')" class="mt-4 bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded-lg text-sm transition-colors shadow-md flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Adicionar Métrica
+                    </button>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 4: FILTROS DO CABEÇALHO - REMOVIDA -->
+            <div id="filter-fields" style="display: none;"></div>
+
+        </form>
+
+        <div class="mt-8 flex justify-end items-center">
+            <span id="save-message" class="text-sm text-green-600 font-medium opacity-0 transition-opacity duration-300 mr-4">Dados Salvos!</span>
+            <button id="save-button" type="submit" form="editor-form" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-lg">
+                Salvar Dados
+            </button>
+        </div>
+        
+        <div class="mt-8 pt-6 border-t border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-700">Ações Rápidas</h2>
+            <a href="index.html" class="text-indigo-600 hover:text-indigo-800 font-medium mt-2 block">
+                → Voltar para a Dashboard!
+            </a>
+            <button id="reset-button" class="text-sm text-red-500 hover:text-red-700 font-medium mt-2 underline">
+                Resetar para Dados Iniciais
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const DATE_STORAGE_KEY_BASE = 'lastUpdateDate'; // Chave base para a data
+        let STORAGE_KEY_KPI;
+        let CHART_STORAGE_KEY_CHART;
+        let FILTERS_STORAGE_KEY_FILTERS;
+        
+        let kpiCardIds = [];
+        let currentPageId = 'index.html'; // Padrão se não for fornecido
+        let lastMetricIndex = 0; // Contador global para novas métricas (Produção)
+        let lastReviewIndex = 0; // Contador global para novas métricas (Revisão)
+        
+
+        // Definicoes de páginas para o dropdown do editor
+        const PAGE_DEFINITIONS = [
+            { id: 'index.html', name: 'KPI Geral (Dashboard Principal)' },
+            { id: 'kpi-mes.html', name: 'KPI Mês' },
+            { id: 'videos.html', name: 'Vídeos' },
+            { id: 'flashcards.html', name: 'Flashcards' },
+            { id: 'questoes.html', name: 'Questões' },
+            { id: 'mapas.html', name: 'Mapas + Apostila' },
+            { id: 'cadastros.html', name: 'Cadastros' },
+            { id: 'kpi-av.html', name: 'KPI AV' },
+            { id: 'status-av.html', name: 'Status AV' },
+            { id: 'calendario.html', name: 'Calendário' },
+        ];
+
+
+        // =================================================================
+        // DEFINIÇÕES DE FILTRO
+        // =================================================================
+        const SPECIALTIES = ["Todos", "Cardiologia", "Pediatria", "Neurologia"];
+        const SUBSPECIALTIES = ["Todos", "Clínica Geral", "Emergência", "Cirurgia"];
+        const MODULES = ["Todos", "Módulo A", "Módulo B", "Módulo C"];
+
+
+        // =================================================================
+        // DADOS INICIAIS (FALLBACK)
+        // =================================================================
+
+        const initialKpiData = [
+            { id: 1, title: 'Material para Gravação', current: 102, total: 600, percentage: 17, specialty: "Cardiologia", subspecialty: "Clínica Geral", module: "Módulo A" },
+            { id: 2, title: 'Agendamento', current: 106, total: 600, percentage: 18, specialty: "Cardiologia", subspecialty: "Emergência", module: "Módulo B" },
+            { id: 3, title: 'Edição', current: 89, total: 600, percentage: 15, specialty: "Pediatria", subspecialty: "Clínica Geral", module: "Módulo C" },
+            { id: 4, title: 'Total de Vídeos', current: 70, total: 600, percentage: 12, specialty: "Pediatria", subspecialty: "Emergência", module: "Módulo A" },
+            { id: 5, title: 'Total de Flashcards', current: 119, total: 2500, percentage: 5, specialty: "Neurologia", subspecialty: "Cirurgia", module: "Módulo B" },
+            { id: 6, title: 'Total de Questões', current: 377, total: 3000, percentage: 11, specialty: "Neurologia", subspecialty: "Clínica Geral", module: "Módulo C" },
+            { id: 7, title: 'Total de Mapas Conceituais', current: 8, total: 100, percentage: 8, specialty: "Todos", subspecialty: "Todos", module: "Módulo A" },
+            { id: 8, title: 'Total de Apostilas', current: 112, total: 173, percentage: 65, specialty: "Cardiologia", subspecialty: "Emergência", module: "Módulo B" },
+            { id: 9, title: 'Conteúdo Cadastrado', current: 69, total: 6373, percentage: 1, specialty: "Pediatria", subspecialty: "Cirurgia", module: "Módulo C" },
+        ];
+        
+        const initialChartData = {
+            monthlyLimits: {
+                labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'],
+                values: [40, 70, 90, 50, 100, 60, 30, 80, 55, 75, 45, 65], // Altura das barras (0-100)
+                limit: 75
+            },
+            weeklyActivities: {
+                labels: ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'],
+                mockValues: [20, 15, 25, 18, 30, 22, 19]
+            },
+            semestreActivities: {
+                labels: ['J', 'F', 'M', 'A', 'M', 'J'],
+                mockValues: [5, 7, 3, 9, 6, 11]
+            },
+            // NOVO: DADOS PARA O PROGRESSO DETALHADO
+            detailedProgress: {
+                titleCard1: 'Métricas de Produção',
+                titleCard2: 'Novo Conteúdo vs. Revisão',
+                productionMetrics: [
+                    { label: 'Total de Imagens Produzidas', value: 322, color: '#38A169' },
+                    { label: 'Ajustes', value: 54, color: '#90EE90' },
+                    { label: 'Novas', value: 268, color: '#50C878' },
+                    { label: 'Análise', value: 0, color: '#C0C0C0' }
+                ],
+                // ESTRUTURA ANTIGA REMOVIDA: novoValor: 130, atualizacaoValor: 72
+                // NOVA ESTRUTURA DINÂMICA
+                reviewMetrics: [
+                    { label: 'Novo', value: 130, color: '#38A169' }, // Mantendo a cor original verde
+                    { label: 'Atualização', value: 72, color: '#c0c0c0' } // Usando amarelo como um contraste
+                ]
+            }
+        };
+
+        const initialFilterData = {
+            Especialidade: false,
+            Subespecialidade: false,
+            Módulo: false,
+            Todos: true,
+        };
+
+        // =================================================================
+        // FUNÇÕES DE PERSISTÊNCIA DINÂMICA
+        // =================================================================
+
+        function setStorageKeys(pageId) {
+            currentPageId = pageId;
+            STORAGE_KEY_KPI = `kpi_${pageId}`;
+            CHART_STORAGE_KEY_CHART = `chart_${pageId}`;
+            FILTERS_STORAGE_KEY_FILTERS = `filters_${pageId}`;
+        }
+
+        function loadKpiData() {
+            const storedData = localStorage.getItem(STORAGE_KEY_KPI);
+            let data = storedData ? JSON.parse(storedData) : initialKpiData;
+            
+            // Garante que a nova estrutura de filtros esteja nos dados carregados
+            return data.map(item => ({
+                ...item,
+                id: item.id || crypto.randomUUID(), // Garante que itens antigos tenham ID para o rastreador
+                specialty: item.specialty || "Todos",
+                subspecialty: item.subspecialty || "Todos",
+                module: item.module || "Todos",
+            }));
+        }
+
+        function loadChartData() {
+            const storedData = localStorage.getItem(CHART_STORAGE_KEY_CHART);
+            let data = storedData ? JSON.parse(storedData) : initialChartData;
+
+            // Garante que detailedProgress exista mesmo se for a primeira carga
+            if (!data.detailedProgress) {
+                data.detailedProgress = initialChartData.detailedProgress;
+            } else {
+                // Garante que a estrutura interna exista (útil se o dado for antigo)
+                if (!data.detailedProgress.productionMetrics) {
+                    data.detailedProgress.productionMetrics = initialChartData.detailedProgress.productionMetrics;
+                }
+                // NOVO: Faz o fallback para reviewMetrics, se a estrutura for antiga
+                if (!data.detailedProgress.reviewMetrics) {
+                     // Converte a estrutura antiga (novoValor/atualizacaoValor) para a nova se existir
+                    if (data.detailedProgress.novoValor !== undefined && data.detailedProgress.atualizacaoValor !== undefined) {
+                        data.detailedProgress.reviewMetrics = [
+                            { label: 'Novo', value: data.detailedProgress.novoValor, color: initialChartData.detailedProgress.reviewMetrics[0].color },
+                            { label: 'Atualização', value: data.detailedProgress.atualizacaoValor, color: initialChartData.detailedProgress.reviewMetrics[1].color }
+                        ];
+                        // Limpa os campos antigos para evitar confusão futura
+                        delete data.detailedProgress.novoValor;
+                        delete data.detailedProgress.atualizacaoValor;
+                    } else {
+                        // Se não houver dados antigos, usa o fallback inicial
+                        data.detailedProgress.reviewMetrics = initialChartData.detailedProgress.reviewMetrics;
+                    }
+                }
+                
+                // Adiciona fallback para os títulos
+                if (data.detailedProgress.titleCard1 === undefined) {
+                    data.detailedProgress.titleCard1 = initialChartData.detailedProgress.titleCard1;
+                }
+                if (data.detailedProgress.titleCard2 === undefined) {
+                    data.detailedProgress.titleCard2 = initialChartData.detailedProgress.titleCard2;
+                }
+            }
+            
+            return data;
+        }
+
+        function loadFilterData() {
+            // Não usamos mais isso para a UI, mas mantemos para consistência do save
+            const storedData = localStorage.getItem(FILTERS_STORAGE_KEY_FILTERS);
+            return storedData ? JSON.parse(storedData) : initialFilterData;
+        }
+
+        function saveData(kpiData, chartData, filterData) {
+            // NOVO: Define a chave da data
+            const DATE_KEY_DYNAMIC = `${DATE_STORAGE_KEY_BASE}_${currentPageId}`;
+            const currentDate = getCurrentFormattedDateTime(); 
+
+            localStorage.setItem(STORAGE_KEY_KPI, JSON.stringify(kpiData));
+            localStorage.setItem(CHART_STORAGE_KEY_CHART, JSON.stringify(chartData));
+            localStorage.setItem(FILTERS_STORAGE_KEY_FILTERS, JSON.stringify(filterData)); 
+            localStorage.setItem(DATE_KEY_DYNAMIC, currentDate); // SALVANDO A DATA DE MODIFICAÇÃO
+        }
+
+        // =================================================================
+        // FUNÇÕES DE RENDERIZAÇÃO E EDIÇÃO DO NOVO CARD
+        // =================================================================
+
+        function calculatePercentage(current, total) {
+            if (total === 0 || isNaN(total)) return 0;
+            return Math.min(100, Math.round((current / total) * 100));
+        }
+        
+        /**
+         * Retorna a data e hora atuais formatadas como DD/MM/YYYY às HH:MM.
+         * @returns {string} Data e hora formatadas.
+         */
+        function getCurrentFormattedDateTime() {
+            const now = new Date();
+            const date = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            return `${date} às ${time}`;
+        }
+        
+        // Função auxiliar para criar as opções de <select>
+        function createSelectOptions(options, selectedValue) {
+            return options.map(option => 
+                `<option value="${option}" ${option === selectedValue ? 'selected' : ''}>${option}</option>`
+            ).join('');
+        }
+        
+        // Gera o HTML de um único card de edição KPI
+        function createKpiEditorCard(item) {
+            const percentage = calculatePercentage(item.current, item.total);
+            const cardId = `kpi-card-${item.id}`;
+            
+            return `
+                <div id="${cardId}" class="kpi-card-editor bg-gray-50 p-4 rounded-lg border border-gray-200 grid grid-cols-1 md:grid-cols-8 gap-3 items-center">
+                    
+                    <!-- Botão de Remover -->
+                    <div class="col-span-1 flex justify-center">
+                         <button type="button" onclick="removeKpiCard('${item.id}')" class="text-red-500 hover:text-red-700 text-xs font-semibold py-1 px-2 rounded-lg transition-colors border border-red-200 hover:border-red-500">
+                            Remover
+                        </button>
+                    </div>
+
+                    <!-- Coluna 1: Título -->
+                    <div class="col-span-1">
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Título</label>
+                        <input name="title-${item.id}" type="text" value="${item.title}" class="w-full border-gray-300 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500" />
+                    </div>
+                    
+                    <!-- Coluna 2: Dados -->
+                    <div class="col-span-1">
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Atual / Total</label>
+                        <div class="flex space-x-1">
+                            <input name="current-${item.id}" type="number" min="0" value="${item.current}" class="data-input" placeholder="Atual" />
+                            <input name="total-${item.id}" type="number" min="1" value="${item.total}" class="data-input" placeholder="Total" />
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Perc: <span class="font-bold" style="color: #00AEEF;">${percentage}%</span></p>
+                    </div>
+                    
+                    <!-- Coluna 3: Especialidade -->
+                    <div class="col-span-1">
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Especialidade</label>
+                        <select name="specialty-${item.id}" class="select-input">
+                            ${createSelectOptions(SPECIALTIES, item.specialty)}
+                        </select>
+                    </div>
+
+                    <!-- Coluna 4: Subespecialidade -->
+                    <div class="col-span-1">
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Subespecialidade</label>
+                        <select name="subspecialty-${item.id}" class="select-input">
+                            ${createSelectOptions(SUBSPECIALTIES, item.subspecialty)}
+                        </select>
+                    </div>
+
+                    <!-- Coluna 5: Módulo -->
+                    <div class="col-span-1">
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Módulo</label>
+                        <select name="module-${item.id}" class="select-input">
+                            ${createSelectOptions(MODULES, item.module)}
+                        </select>
+                    </div>
+                    
+                    <!-- Coluna 6: Placeholder para alinhamento -->
+                    <div class="col-span-1 flex items-center justify-center">
+                        <!-- Espaço reservado -->
+                    </div>
+                </div>
+            `;
+        }
+
+        // Função para adicionar um novo card ao formulário
+        function addNewKpiCard() {
+            // Garante que o array de IDs esteja carregado
+            if (kpiCardIds.length === 0) {
+                kpiCardIds = loadKpiData().map(item => item.id);
+            }
+            
+            // Encontra o ID mais alto e adiciona 1
+            const maxId = kpiCardIds.length > 0 ? Math.max(...kpiCardIds.filter(id => typeof id === 'number')) : 0;
+            const newId = maxId + 1;
+
+            // Dados iniciais para o novo card
+            const newItem = {
+                id: newId,
+                title: `Novo Card ${newId}`,
+                current: 0,
+                total: 100,
+                percentage: 0,
+                specialty: "Todos",
+                subspecialty: "Todos",
+                module: "Todos",
+            };
+            
+            kpiCardIds.push(newId);
+
+            const kpiForm = document.getElementById('kpi-fields');
+            const newCardHtml = createKpiEditorCard(newItem);
+            
+            if (kpiForm) {
+                kpiForm.insertAdjacentHTML('beforeend', newCardHtml);
+                
+                const newCardElement = document.getElementById(`kpi-card-${newId}`);
+
+                if (newCardElement && typeof newCardElement.scrollIntoView === 'function') {
+                    newCardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }
+        
+        // Remove um card do formulário
+        function removeKpiCard(id) {
+            if (confirm(`Tem certeza que deseja remover o card com ID ${id}? (Esta mudança será permanente após Salvar Dados)`)) {
+                const cardElement = document.getElementById(`kpi-card-${id}`);
+                if (cardElement) {
+                    cardElement.remove();
+                    const idToRemove = parseInt(id);
+                    kpiCardIds = kpiCardIds.filter(cardId => cardId !== idToRemove);
+                }
+            }
+        }
+        
+        // NOVO: Função para criar um único campo de métrica (usado para Card 1 e Card 2)
+        function createMetricRow(metric, index, prefix) {
+            const rowId = `${prefix}-metric-row-${index}`;
+            const labelName = `${prefix}-label-${index}`;
+            const valueName = `${prefix}-value-${index}`;
+            const colorName = `${prefix}-color-${index}`;
+            
+            return `
+                <div id="${rowId}" class="metric-row">
+                    <!-- Label -->
+                    <div>
+                        <input name="${labelName}" type="text" value="${metric.label}" class="data-input text-left" placeholder="Nome da Métrica" />
+                    </div>
+                    
+                    <!-- Valor -->
+                    <div>
+                        <input name="${valueName}" type="number" min="0" value="${metric.value}" class="data-input" placeholder="Valor" />
+                    </div>
+
+                    <!-- Cor -->
+                    <div>
+                        <input name="${colorName}" type="color" value="${metric.color}" class="color-input" />
+                    </div>
+                    
+                    <!-- Botão Remover -->
+                    <div>
+                         <button type="button" onclick="removeProductionMetric('${rowId}')" class="text-red-500 hover:text-red-700 text-xs font-semibold py-1 px-2 rounded-lg transition-colors border border-red-200 hover:border-red-500">
+                            X
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function removeProductionMetric(rowId) {
+            const rowElement = document.getElementById(rowId);
+            if (rowElement) {
+                rowElement.remove();
+            }
+        }
+        
+        // Função unificada para adicionar métricas em qualquer container
+        function addProductionMetric(containerId, prefix) {
+            const container = document.getElementById(containerId);
+            let newIndex;
+            let initialColor;
+            
+            if (prefix === 'prod') {
+                lastMetricIndex++; 
+                newIndex = lastMetricIndex;
+                initialColor = '#60A5FA'; // Azul para produção
+            } else if (prefix === 'review') {
+                lastReviewIndex++;
+                newIndex = lastReviewIndex;
+                initialColor = '#c0c0c0'; // Amarelo/Laranja para revisão
+            } else {
+                return;
+            }
+            
+            const newMetric = {
+                label: `Nova Métrica ${newIndex}`,
+                value: 1,
+                color: initialColor
+            };
+            
+            if (container) {
+                container.insertAdjacentHTML('beforeend', createMetricRow(newMetric, newIndex, prefix));
+                
+                const newCardElement = document.getElementById(`${prefix}-metric-row-${newIndex}`);
+
+                if (newCardElement && typeof newCardElement.scrollIntoView === 'function') {
+                    newCardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }
+        
+        // NOVO: Função genérica para obter métricas dinâmicas do DOM
+        function getMetricsFromDOM(containerId, prefix) {
+            const metrics = [];
+            const container = document.getElementById(containerId);
+            if (!container) return metrics;
+            
+            // Note: Usamos querySelectorAll('.metric-row') para garantir que pegamos apenas as linhas de métrica
+            const metricRows = container.querySelectorAll('.metric-row');
+            
+            metricRows.forEach((row) => {
+                // Usa a estrutura de prefixo para encontrar os inputs corretamente
+                const labelInput = row.querySelector(`input[name^="${prefix}-label-"]`);
+                const valueInput = row.querySelector(`input[name^="${prefix}-value-"]`);
+                const colorInput = row.querySelector(`input[name^="${prefix}-color-"]`);
+
+                if (labelInput && valueInput && colorInput) {
+                    metrics.push({
+                        label: labelInput.value.trim(),
+                        value: parseInt(valueInput.value) || 0,
+                        color: colorInput.value,
+                    });
+                }
+            });
+            return metrics;
+        }
+
+
+        function renderForm() {
+            const kpiData = loadKpiData();
+            const chartData = loadChartData(); 
+            const filterData = loadFilterData(); 
+            
+            // Renderiza o dropdown de seleção de página
+            renderPageSelect();
+
+            // 1. Renderiza campos dos KPIs com Dropdowns de Filtro
+            const kpiForm = document.getElementById('kpi-fields');
+            kpiForm.innerHTML = kpiData.map(item => createKpiEditorCard(item)).join('');
+            
+            // ATUALIZA A LISTA DE IDS ATIVOS
+            kpiCardIds = kpiData.map(item => item.id);
+
+
+            // 2. Renderiza campos dos Gráficos (Limites e Atividades)
+            // ... (código existente para Gráficos)
+
+            // 3. Renderiza campos do Gráfico 1: Limites Mensais
+            const limitsForm = document.getElementById('limits-chart-fields');
+            limitsForm.innerHTML = chartData.monthlyLimits.labels.map((label, index) => `
+                <div>
+                    <div class="data-label">${label} (0-100)</div>
+                    <input name="monthly-limit-${index}" type="number" min="0" max="100" value="${chartData.monthlyLimits.values[index]}" class="data-input" />
+                </div>
+            `).join('');
+
+            // 4. Renderiza campos do Gráfico 2: Atividades da Semana
+            const weeklyForm = document.getElementById('weekly-chart-fields');
+            weeklyForm.innerHTML = chartData.weeklyActivities.labels.map((label, index) => `
+                <div>
+                    <div class="data-label">${label} (Valor)</div>
+                    <input name="weekly-value-${index}" type="number" value="${chartData.weeklyActivities.mockValues[index]}" class="data-input" />
+                </div>
+            `).join('');
+
+            // 5. Renderiza campos do Gráfico 3: Atividades 1º Semestre
+            const semestreForm = document.getElementById('semestre-chart-fields');
+            semestreForm.innerHTML = chartData.semestreActivities.labels.map((label, index) => `
+                <div>
+                    <div class="data-label">${label} (Valor)</div>
+                    <input name="semestre-value-${index}" type="number" value="${chartData.semestreActivities.mockValues[index]}" class="data-input" />
+                </div>
+            `).join('');
+            
+            // 6. Renderiza campos de Progresso Detalhado (Seção 3)
+            const detailedProgress = chartData.detailedProgress;
+            
+            // Card 1: Títulos
+            document.querySelector('input[name="titleCard1"]').value = detailedProgress.titleCard1;
+            document.querySelector('input[name="titleCard2"]').value = detailedProgress.titleCard2;
+            
+            // Card 1: Métricas de Produção (Dinâmico - Prefix 'prod')
+            const prodMetricsContainer = document.getElementById('production-metrics-fields');
+            prodMetricsContainer.innerHTML = detailedProgress.productionMetrics.map((metric, index) => {
+                return createMetricRow(metric, index, 'prod');
+            }).join('');
+            
+            // Card 2: Métricas de Revisão (Dinâmico - Prefix 'review')
+            const reviewMetricsContainer = document.getElementById('review-metrics-fields');
+            reviewMetricsContainer.innerHTML = detailedProgress.reviewMetrics.map((metric, index) => {
+                return createMetricRow(metric, index, 'review');
+            }).join('');
+            
+            // Atualiza os índices globais para o próximo item a ser adicionado
+            lastMetricIndex = detailedProgress.productionMetrics.length > 0 ? detailedProgress.productionMetrics.length : 0;
+            lastReviewIndex = detailedProgress.reviewMetrics.length > 0 ? detailedProgress.reviewMetrics.length : 0;
+            
+
+            // 7. Renderiza campos dos Filtros do Cabeçalho - REMOVIDO DA UI
+            const filterFields = document.getElementById('filter-fields');
+            filterFields.innerHTML = "";
+            
+        }
+
+        // NOVO: Função para obter o Page ID da URL
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // NOVO: Função para renderizar o seletor de página
+        function renderPageSelect() {
+            const selectElement = document.getElementById('page-select');
+            if (!selectElement) return;
+
+            let optionsHtml = '';
+            PAGE_DEFINITIONS.forEach(page => {
+                const isSelected = page.id === currentPageId;
+                optionsHtml += `<option value="${page.id}" ${isSelected ? 'selected' : ''}>${page.name}</option>`;
+            });
+
+            selectElement.innerHTML = optionsHtml;
+        }
+
+
+        function handleSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+
+            // Processar Dados KPIs (LÓGICA DINÂMICA)
+            const newKpiData = kpiCardIds.map(id => {
+                const current = parseInt(formData.get(`current-${id}`)) || 0;
+                const total = parseInt(formData.get(`total-${id}`)) || 1; 
+                
+                return {
+                    id: id,
+                    title: formData.get(`title-${id}`),
+                    current: current,
+                    total: total,
+                    percentage: calculatePercentage(current, total),
+                    
+                    specialty: formData.get(`specialty-${id}`),
+                    subspecialty: formData.get(`subspecialty-${id}`),
+                    module: formData.get(`module-${id}`),
+                };
+            });
+
+            // Processar Dados dos Gráficos (Inclui Progressos Detalhados)
+            const oldChartData = loadChartData();
+            const newChartData = {
+                monthlyLimits: oldChartData.monthlyLimits,
+                weeklyActivities: oldChartData.weeklyActivities,
+                semestreActivities: oldChartData.semestreActivities,
+                detailedProgress: oldChartData.detailedProgress // Inicializa com dados antigos para atualizar
+            };
+            
+            // Atualiza Gráficos de Limites e Atividades
+            newChartData.monthlyLimits.values = newChartData.monthlyLimits.labels.map((_, index) => 
+                Math.min(100, Math.max(0, parseInt(formData.get(`monthly-limit-${index}`)))) || 0
+            );
+
+            newChartData.weeklyActivities.mockValues = newChartData.weeklyActivities.labels.map((_, index) => 
+                parseInt(formData.get(`weekly-value-${index}`)) || 0
+            );
+
+            newChartData.semestreActivities.mockValues = newChartData.semestreActivities.labels.map((_, index) => 
+                parseInt(formData.get(`semestre-value-${index}`)) || 0
+            );
+            
+            // NOVO: Atualiza Dados do Progresso Detalhado (Títulos e Métricas Dinâmicas)
+            newChartData.detailedProgress.titleCard1 = formData.get('titleCard1') || initialChartData.detailedProgress.titleCard1;
+            newChartData.detailedProgress.titleCard2 = formData.get('titleCard2') || initialChartData.detailedProgress.titleCard2;
+            
+            // Usa a função que lê do DOM para capturar os arrays dinâmicos
+            newChartData.detailedProgress.productionMetrics = getMetricsFromDOM('production-metrics-fields', 'prod');
+            newChartData.detailedProgress.reviewMetrics = getMetricsFromDOM('review-metrics-fields', 'review');
+            
+            // REMOVE os campos antigos para garantir que a estrutura final seja limpa
+            delete newChartData.detailedProgress.novoValor;
+            delete newChartData.detailedProgress.atualizacaoValor;
+
+            const newFilterData = loadFilterData(); 
+
+            saveData(newKpiData, newChartData, newFilterData); 
+            renderForm();
+            
+            const saveMessage = document.getElementById('save-message');
+            saveMessage.classList.remove('opacity-0');
+            setTimeout(() => {
+                saveMessage.classList.add('opacity-0');
+            }, 3000);
+        }
+
+        function handleReset() {
+            if (confirm(`Tem certeza que deseja resetar TODOS os dados (KPIs e Gráficos) para a página ${currentPageId}?`)) {
+                
+                // NOVO: Remove explicitamente a chave de data ao resetar
+                const DATE_KEY_DYNAMIC = `${DATE_STORAGE_KEY_BASE}_${currentPageId}`;
+                localStorage.removeItem(DATE_KEY_DYNAMIC); 
+
+                saveData(initialKpiData, initialChartData, initialFilterData); 
+                renderForm();
+                console.log(`Dados da página ${currentPageId} resetados! Por favor, atualize o Dashboard para ver as mudanças.`);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Define a chave de armazenamento com base no parâmetro 'page' na URL
+            const requestedPage = getUrlParameter('page');
+            const pageToLoad = requestedPage || 'index.html'; // Padrão para index.html
+            
+            setStorageKeys(pageToLoad);
+
+            // 2. Renderiza o formulário com os dados da chave específica
+            renderForm();
+
+            // 3. Configura listeners
+            document.getElementById('editor-form').addEventListener('submit', handleSubmit);
+            document.getElementById('reset-button').addEventListener('click', handleReset);
+        });
+    </script>
+</body>
+</html>
