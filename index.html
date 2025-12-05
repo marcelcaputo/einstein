@@ -172,7 +172,7 @@
       titleSemestreActivities: 'Produções do Semestre',
 
       monthlyLimits: {
-        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'],
+        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
         values: [40, 70, 90, 50, 100, 60, 30, 80, 55, 75, 45, 65],
         limit: 75
       },
@@ -659,7 +659,7 @@
       let controlsHtml = ''; 
       
       // Ajusta os rótulos do semestre para exibir Jan-Jun ou Jul-Dez
-      const displayLabels = isSemestre ? ((data.semestreRef === '2') ? ['Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'] : ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun']) : labels;
+      const displayLabels = isSemestre ? ((data.semestreRef === '2') ? ['Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'] : ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun']) : labels;
 
 
       // CLASSE shadow-sm E card-base ADICIONADAS AQUI
