@@ -6,13 +6,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EAD - Dashboard Prepara</title>
   <link rel="icon" href="favicon.png" type="image/png">
-  <!-- Carrega o Tailwind CSS via CDN para os estilos -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Estilos customizados para a sidebar fixa e transições */
+    /* Transições suaves para mudança de tema */
+    * {
+      transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+
+    /* Variáveis de cor para cada tema */
+    :root {
+      --bg-primary: #f9fafb;
+      /* Fundo dos cards e sidebar (cinza claro) */
+      --bg-secondary: #f7f7f7; 
+      --bg-tertiary: #f3f4f6;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --border-color: #e5e7eb;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --azure: #004f92;
+      --violet-dark: #4F21B9;
+      --violet-light: #D38CFB;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #111827;
+      /* Fundo dos cards e sidebar (cinza escuro) */
+      --bg-secondary: #2a3544; 
+      --bg-tertiary: #374151;
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --border-color: #374151;
+      --shadow: rgba(0, 0, 0, 0.3);
+      --azure: #3b82f6;
+      --violet-dark: #8b5cf6;
+      --violet-light: #c084fc;
+    }
+
+    body {
+      /* Usa a variável de cor de fundo e texto principal */
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
     #sidebar {
       width: 240px;
       padding-top: 20px;
+      /* Usa a variável para o fundo da sidebar */
+      background-color: var(--bg-secondary); 
+      border-color: var(--border-color);
     }
 
     .logo {
@@ -27,11 +68,9 @@
       margin-left: 240px;
     }
 
-    /* Garantir que a animação de recolhimento seja suave */
     .general-data-container {
       transition: all 0.5s ease-in-out;
       max-height: 1000px;
-      /* Grande o suficiente para o conteúdo visível */
       overflow: hidden;
     }
 
@@ -40,59 +79,136 @@
     }
 
     .rotate-180 {
-    	transform: rotate(180deg);
+      transform: rotate(180deg);
     }
 
-    /* Estilo para destacar o filtro ativo no header */
     .filter-active {
-      background-color: #f0f9ff;
-      /* Fundo levemente azulado para indicar ativo */
+      background-color: var(--bg-tertiary);
       font-weight: 600;
     }
 
-    /* Esconde o menu de opções por padrão */
     .menu-options {
       display: none;
+      background-color: var(--bg-secondary);
+      border-color: var(--border-color);
     }
 
-    /* Mostrar o menu quando a classe 'active' estiver presente */
     .menu-options.active {
       display: block;
     }
 
-    /* CORREÇÃO CRÍTICA: Esconde a seta padrão do navegador nos campos de seleção */
     .header-filter {
       -webkit-appearance: none;
       -moz-appearance: none;
       appearance: none;
       background-image: none;
-      /* Garante que não haja imagem de fundo nativa */
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
+      border-color: var(--azure);
     }
     
-    /* Adiciona transição base para todos os cards (melhora o efeito hover de sombra) */
     .card-base {
-        transition: box-shadow 0.3s ease-in-out, transform 0.1s ease-out;
+      transition: box-shadow 0.3s ease-in-out, transform 0.1s ease-out;
+      /* Usa a variável para o fundo dos cards */
+      background-color: var(--bg-secondary); 
+      border-color: var(--border-color);
+      /* Garante que o texto dentro do card use a cor primária, que muda com o tema */
+      color: var(--text-primary); 
     }
+
     .card-base:hover {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg simulado no hover */
+      box-shadow: 0 10px 15px -3px var(--shadow), 0 4px 6px -2px var(--shadow);
     }
     
-    /* Garante que a área do gráfico não corte o tooltip */
     #monthly-limits-chart-area {
-        overflow: visible; 
+      overflow: visible;
+      background-color: var(--bg-tertiary);
     }
     
-    /* Garante que a área do gráfico de linha não corte o tooltip */
     .line-chart-area {
-        overflow: visible;
+      overflow: visible;
+      background-color: var(--bg-tertiary);
     }
     
-    /* Tooltip padrão para gráficos de linha */
     .point-tooltip {
-        position: absolute;
-        pointer-events: none;
-        z-index: 10;
-        transition: opacity 0.2s;
+      position: absolute;
+      pointer-events: none;
+      z-index: 10;
+      transition: opacity 0.2s;
+    }
+
+    /* Toggle Dark Mode */
+    .theme-toggle {
+      position: relative;
+      width: 60px;
+      height: 30px;
+      background-color: var(--border-color);
+      border-radius: 15px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .theme-toggle.active {
+      background-color: var(--azure);
+    }
+
+    .theme-toggle-slider {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      background-color: var(--bg-secondary);
+      border-radius: 50%;
+      transition: transform 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .theme-toggle.active .theme-toggle-slider {
+      transform: translateX(30px);
+    }
+
+    /* Customizações específicas para dark mode */
+    [data-theme="dark"] .text-gray-800 {
+      color: #f9fafb !important;
+    }
+
+    [data-theme="dark"] .text-gray-700 {
+      color: #d1d5db !important;
+    }
+
+    [data-theme="dark"] .text-gray-600 {
+      color: #9ca3af !important;
+    }
+
+    [data-theme="dark"] .text-gray-500 {
+      color: #d0d7e4 !important;
+    }
+
+    [data-theme="dark"] .bg-gray-50 {
+      background-color: #374151 !important;
+    }
+
+    [data-theme="dark"] .bg-gray-100 {
+      background-color: #4b5563 !important;
+    }
+
+    [data-theme="dark"] .border-gray-100,
+    [data-theme="dark"] .border-gray-200 {
+      border-color: #374151 !important;
+    }
+
+    [data-theme="dark"] .hover\:bg-gray-50:hover,
+    [data-theme="dark"] .hover\:bg-gray-100:hover {
+      background-color: #4b5563 !important;
+    }
+
+    [data-theme="dark"] svg path,
+    [data-theme="dark"] svg polyline,
+    [data-theme="dark"] svg line {
+      stroke: currentColor;
     }
     
   </style>
@@ -100,59 +216,103 @@
 
 <body class="bg-gray-50 font-sans">
 
-  <!-- Sidebar (Fixo) -->
-  <div id="sidebar" class="bg-white border-r border-gray-200 h-screen fixed top-0 left-0 z-30 flex flex-col shadow-xl">
-    <!-- O conteúdo da sidebar será injetado pelo JavaScript -->
+  <!-- CORREÇÃO: Removida a classe 'bg-white' do sidebar. O fundo é controlado pelo CSS customizado do #sidebar. -->
+  <div id="sidebar" class="border-r border-gray-200 h-screen fixed top-0 left-0 z-30 flex flex-col shadow-xl">
   </div>
 
-  <!-- Conteúdo Principal -->
   <main id="main-content" class="flex-1 p-4 sm:p-6">
-    <!-- O conteúdo principal (Header, KPIs, Gráficos) será injetado aqui -->
   </main>
-
 
   <script>
     // =================================================================
-    // 1. DADOS E CHAVES DE ARMAZENAMENTO
+    // CONSTANTES E CONFIGURAÇÕES
     // =================================================================
 
-    const AZURE_COLOR = '#004f92'; // Azul Royal/Vibrante (Topo do gradiente)
-    const VIOLET_DARK = '#4F21B9'; // Base escura do gradiente da barra
-    const GRAY = '#6E6E6E'; // Base escura do gradiente da barra
-    const VIOLET_LIGHT = '#D38CFB'; // Cor suave para linha tracejada
-    const VIOLET_GRADIENT_END = '#D38CFB'; // Cor vibrante do topo da barra
+    const AZURE_COLOR = '#004f92';
+    const VIOLET_DARK = '#4F21B9';
+    const GRAY = '#6E6E6E';
+    const VIOLET_LIGHT = '#D38CFB';
+    const VIOLET_GRADIENT_END = '#D38CFB';
     const FILTERS_STORAGE_KEY_SUFFIX = 'filters';
-    const DATE_STORAGE_KEY_BASE = 'lastUpdateDate'; // Chave base para a data
-    const AUTH_KEY = 'isLoggedIn'; // CHAVE DE AUTENTICAÇÃO
-    const PROGRESS_PAGE_KEY = 'progressPageId'; // CHAVE GLOBAL PARA A PÁGINA DO PROGRESSO DETALHADO
+    const DATE_STORAGE_KEY_BASE = 'lastUpdateDate';
+    const AUTH_KEY = 'isLoggedIn';
+    const PROGRESS_PAGE_KEY = 'progressPageId';
+    const THEME_KEY = 'theme'; // Nova chave para salvar o tema
 
-    // Definições de Filtro (DEVE SER IDÊNTICO AO EDITOR)
     const FILTER_DEFINITIONS = {
       specialty: { title: "Especialidade", options: ["Todos", "Cardiologia", "Pediatria", "Neurologia"] },
       subspecialty: { title: "Subespecialidade", options: ["Todos", "Clínica Geral", "Emergência", "Cirurgia"] },
       module: { title: "Módulo", options: ["Todos", "Módulo A", "Módulo B", "Módulo C"] }
     };
 
-    // --- Funções Auxiliares de URL e Storage ---
+    // =================================================================
+    // FUNÇÕES DE TEMA
+    // =================================================================
+
+    function loadTheme() {
+      const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      return savedTheme;
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem(THEME_KEY, newTheme);
+      
+      // Atualiza o visual do toggle
+      const toggle = document.getElementById('theme-toggle');
+      if (toggle) {
+        // Atualiza o slider e o ícone
+        toggle.classList.toggle('active', newTheme === 'dark');
+        const slider = toggle.querySelector('.theme-toggle-slider');
+        if (slider) {
+          slider.innerHTML = newTheme === 'dark' ? getMoonIcon() : getSunIcon();
+        }
+      }
+      
+      // Atualiza cores dos gráficos
+      updateChartColors();
+    }
+
+    function updateChartColors() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      // Força re-render dos gráficos com as novas cores
+      renderGeneralDataSection();
+      filterAndRenderKpis();
+    }
+
+    function getThemeColors() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      return {
+        azure: isDark ? '#3b82f6' : '#004f92',
+        violetDark: isDark ? '#8b5cf6' : '#4F21B9',
+        violetLight: isDark ? '#c084fc' : '#D38CFB',
+        text: isDark ? '#f9fafb' : '#1f2937',
+        textSecondary: isDark ? '#9ca3af' : '#6b7280',
+        border: isDark ? '#374151' : '#e5e7eb'
+      };
+    }
+
+    // =================================================================
+    // FUNÇÕES AUXILIARES
+    // =================================================================
 
     function getUrlParameter(name) {
       name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
       const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
       const results = regex.exec(location.search);
-      // CORRIGIDO: Removida a string de template literal inválida
       return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' ')); 
     }
 
-    // Determina o Page ID (usando o parâmetro 'page' se existir)
     const currentURLPage = window.location.pathname.split('/').pop();
     const FILE_ID = getUrlParameter('page') || currentURLPage;
 
-    // Chaves dinâmicas para carregar os dados
     const STORAGE_KEY_KPI = `kpi_${FILE_ID}`;
     const CHART_STORAGE_KEY_CHART = `chart_${FILE_ID}`;
-    const DATE_KEY = `${DATE_STORAGE_KEY_BASE}_${FILE_ID}`; // CHAVE DINÂMICA DA DATA
+    const DATE_KEY = `${DATE_STORAGE_KEY_BASE}_${FILE_ID}`;
 
-    // Dados Iniciais (Fallback)
     const initialKpiData = [
       { id: 1, title: 'Material para Gravação', current: 102, total: 600, percentage: 17, specialty: "Cardiologia", subspecialty: "Clínica Geral", module: "Módulo A" },
       { id: 2, title: 'Agendamento', current: 106, total: 600, percentage: 18, specialty: "Cardiologia", subspecialty: "Emergência", module: "Módulo B" },
@@ -166,41 +326,38 @@
     ];
 
     const initialChartData = {
-      // NOVOS: Títulos da Seção 2 (Gráficos)
-      titleMonthlyLimits: 'Produções do Ano',
-      titleWeeklyActivities: 'Produção da Semana',
-      titleSemestreActivities: 'Produções do Semestre',
-
+      titleMonthlyLimits: 'Limites Mensais',
+      titleWeeklyActivities: 'Atividades da Semana',
+      titleSemestreActivities: 'Atividades do 1º Semestre',
       monthlyLimits: {
-        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'],
         values: [40, 70, 90, 50, 100, 60, 30, 80, 55, 75, 45, 65],
         limit: 75
       },
       weeklyActivities: {
         labels: ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'],
         mockValues: [20, 15, 25, 18, 30, 22, 19],
-        goal: 30 // Meta Semanal
+        goal: 30
       },
       semestreActivities: {
         labels: ['J', 'F', 'M', 'A', 'M', 'J'],
         mockValues: [5, 7, 3, 9, 6, 11],
-        goal: 10, // Meta Semestral
-        semestreRef: '1' // 1º ou 2º Semestre
+        goal: 10,
+        semestreRef: '1'
       },
-      // DADOS PARA O PROGRESSO DETALHADO (Sincronizado com editor.html)
       detailedProgress: {
-          titleCard1: 'Métricas de Produção', // Título editável
-          titleCard2: 'Novo Conteúdo vs. Revisão', // Título editável
-          productionMetrics: [
-              { label: 'Total de Imagens Produzidas', value: 322, color: '#38A169' },
-              { label: 'Ajustes', value: 54, color: '#90EE90' },
-              { label: 'Novas', value: 268, color: '#50C878' },
-              { label: 'Análise', value: 0, color: '#C0C0C0' }
-          ],
-          reviewMetrics: [
-              { label: 'Novo', value: 130, color: '#38A169' }, 
-              { label: 'Atualização', value: 72, color: '#FCD34D' }
-          ]
+        titleCard1: 'Métricas de Produção',
+        titleCard2: 'Novo Conteúdo vs. Revisão',
+        productionMetrics: [
+          { label: 'Total de Imagens Produzidas', value: 322, color: '#38A169' },
+          { label: 'Ajustes', value: 54, color: '#90EE90' },
+          { label: 'Novas', value: 268, color: '#50C878' },
+          { label: 'Análise', value: 0, color: '#C0C0C0' }
+        ],
+        reviewMetrics: [
+          { label: 'Novo', value: 130, color: '#38A169' }, 
+          { label: 'Atualização', value: 72, color: '#FCD34D' }
+        ]
       }
     };
 
@@ -217,9 +374,6 @@
       module: 'Todos'
     };
 
-
-    // --- Funções de Carregamento ---
-
     function loadKpiData() {
       const storedData = localStorage.getItem(STORAGE_KEY_KPI);
       let data = storedData ? JSON.parse(storedData) : initialKpiData;
@@ -235,52 +389,43 @@
       const storedData = localStorage.getItem(CHART_STORAGE_KEY_CHART);
       let data = storedData ? JSON.parse(storedData) : initialChartData;
       
-      // Tratamento de Fallback para Títulos da Seção 2
       if (data.titleMonthlyLimits === undefined) data.titleMonthlyLimits = initialChartData.titleMonthlyLimits;
       if (data.titleWeeklyActivities === undefined) data.titleWeeklyActivities = initialChartData.titleWeeklyActivities;
       if (data.titleSemestreActivities === undefined) data.titleSemestreActivities = initialChartData.titleSemestreActivities;
       
-      // Garante que detailedProgress e metas existam (lógica de fallback mantida)
       if (!data.detailedProgress) {
-          data.detailedProgress = initialChartData.detailedProgress;
+        data.detailedProgress = initialChartData.detailedProgress;
       } else {
-          // Adiciona fallback para as metas se for a primeira carga da nova versão
-          if (data.weeklyActivities.goal === undefined) data.weeklyActivities.goal = initialChartData.weeklyActivities.goal;
-          if (data.semestreActivities.goal === undefined) data.semestreActivities.goal = initialChartData.semestreActivities.goal;
-          if (data.semestreActivities.semestreRef === undefined) data.semestreActivities.semestreRef = initialChartData.semestreActivities.semestreRef;
+        if (data.weeklyActivities.goal === undefined) data.weeklyActivities.goal = initialChartData.weeklyActivities.goal;
+        if (data.semestreActivities.goal === undefined) data.semestreActivities.goal = initialChartData.semestreActivities.goal;
+        if (data.semestreActivities.semestreRef === undefined) data.semestreActivities.semestreRef = initialChartData.semestreActivities.semestreRef;
 
-          // Garante que a estrutura interna de progresso detalhado exista
-          const detailed = data.detailedProgress;
-          if (!detailed) { data.detailedProgress = initialChartData.detailedProgress; return data; }
+        const detailed = data.detailedProgress;
+        if (!detailed) { data.detailedProgress = initialChartData.detailedProgress; return data; }
 
-          if (!detailed.productionMetrics) {
-              detailed.productionMetrics = initialChartData.detailedProgress.productionMetrics;
+        if (!detailed.productionMetrics) {
+          detailed.productionMetrics = initialChartData.detailedProgress.productionMetrics;
+        }
+        
+        if (!detailed.reviewMetrics) {
+          if (detailed.novoValor !== undefined && detailed.atualizacaoValor !== undefined) {
+            detailed.reviewMetrics = [
+              { label: 'Novo', value: detailed.novoValor, color: initialChartData.detailedProgress.reviewMetrics[0].color },
+              { label: 'Atualização', value: detailed.atualizacaoValor, color: initialChartData.detailedProgress.reviewMetrics[1].color }
+            ];
+            delete detailed.novoValor;
+            delete detailed.atualizacaoValor;
+          } else {
+            detailed.reviewMetrics = initialChartData.detailedProgress.reviewMetrics;
           }
-          
-          // Fallback para reviewMetrics e conversão da estrutura antiga (novoValor/atualizacaoValor)
-          if (!detailed.reviewMetrics) {
-              if (detailed.novoValor !== undefined && detailed.atualizacaoValor !== undefined) {
-                  // Converte a estrutura antiga para a nova (mantendo as cores do fallback)
-                  detailed.reviewMetrics = [
-                      { label: 'Novo', value: detailed.novoValor, color: initialChartData.detailedProgress.reviewMetrics[0].color },
-                      { label: 'Atualização', value: detailed.atualizacaoValor, color: initialChartData.detailedProgress.reviewMetrics[1].color }
-                  ];
-                  // Opcional: Limpar campos antigos para manter a estrutura limpa
-                  delete detailed.novoValor;
-                  delete detailed.atualizacaoValor;
-              } else {
-                  // Se não houver dados antigos, usa o fallback inicial
-                  detailed.reviewMetrics = initialChartData.detailedProgress.reviewMetrics;
-              }
-          }
-          
-          // Adiciona fallback para os títulos
-          if (detailed.titleCard1 === undefined) {
-              detailed.titleCard1 = initialChartData.detailedProgress.titleCard1;
-          }
-          if (detailed.titleCard2 === undefined) {
-              detailed.titleCard2 = initialChartData.detailedProgress.titleCard2;
-          }
+        }
+        
+        if (detailed.titleCard1 === undefined) {
+          detailed.titleCard1 = initialChartData.detailedProgress.titleCard1;
+        }
+        if (detailed.titleCard2 === undefined) {
+          detailed.titleCard2 = initialChartData.detailedProgress.titleCard2;
+        }
       }
       
       return data;
@@ -291,195 +436,196 @@
       return storedData ? JSON.parse(storedData) : initialFilterStatus;
     }
 
-    // NOVO: Função para carregar a página de exibição do progresso detalhado
     function loadProgressPageId() {
-        return localStorage.getItem(PROGRESS_PAGE_KEY) || 'index.html';
+      return localStorage.getItem(PROGRESS_PAGE_KEY) || 'index.html';
     }
 
-    // Função para carregar a data da última modificação
     function loadLastUpdateDate() {
-      // Carrega a data salva no localStorage (que é atualizada no editor)
       return localStorage.getItem(DATE_KEY) || 'Nenhuma modificação salva';
     }
 
-    // NOVO: Verifica o status de login
     function checkAuthStatus() {
       return localStorage.getItem(AUTH_KEY) === 'true';
     }
 
-
-    // Carrega os dados
     const kpiData = loadKpiData();
     const chartData = loadChartData();
     const filterStatus = loadFilterStatus();
-    const lastUpdateDate = loadLastUpdateDate(); // Carrega a data
-    const progressPageId = loadProgressPageId(); // Carrega a página de exibição do progresso
+    const lastUpdateDate = loadLastUpdateDate();
+    const progressPageId = loadProgressPageId();
 
     let showGeneralData = true;
 
     // =================================================================
-    // 2. FUNÇÕES AUXILIARES (ÍCONES SVG)
+    // ÍCONES
     // =================================================================
 
-    // Ícone de Edição para o KPI Card (mantido para evitar ReferenceError no filtro)
-    const getEditIcon = () => `
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-500 hover:text-indigo-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    const getEditIcon = () => {
+      const colors = getThemeColors();
+      return `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-colors" fill="none" viewBox="0 0 24 24" stroke="${colors.azure}" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
         </svg>
-    `;
+      `;
+    };
 
-    const getCheckCircleIcon = () => `
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${AZURE_COLOR}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500 w-5 h-5 mr-2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-        `;
+    const getCheckCircleIcon = () => {
+      const colors = getThemeColors();
+      return `
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${colors.azure}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+      `;
+    };
 
     const getSidebarIcon = (active) => `
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 ${active ? 'text-white' : 'text-indigo-600'}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
-        `;
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 ${active ? 'text-white' : 'text-indigo-600'}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+    `;
 
-    // Ícone de Login/Logout
-    const getLoginIcon = (isLoggedIn) => isLoggedIn ? `
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-            </svg>
-        ` : `
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-            </svg>
-        `;
+    const getLoginIcon = (isLoggedIn) => `
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+      </svg>
+    `;
 
     const getSettingsIcon = () => `
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 012-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-            </svg>
-        `;
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 012-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+    `;
 
-    // FUNÇÃO DE LOGO - Carrega o arquivo logo.png da mesma pasta
-    const getLogoSvg = () => `
-            <img src="logo.png" alt="Logo Einstein">
-        `;
+    const getLogoSvg = () => `<img src="logo.png" alt="Logo Einstein">`;
+
+    const getSunIcon = () => `
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line>
+        <line x1="21" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+      </svg>
+    `;
+
+    const getMoonIcon = () => `
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+    `;
 
     // =================================================================
-    // 3. RENDERIZAÇÃO E LÓGICA DE FILTRAGEM
+    // RENDERIZAÇÃO
     // =================================================================
 
     function createFilterOptions(options, idKey) {
       const uniqueOptions = [...new Set(options)].sort();
       return uniqueOptions.map(option => `
-                <option value="${option}" ${option === currentFilterValues[idKey] ? 'selected' : ''}>
-                    ${option}
-                </option>
-            `).join('');
+        <option value="${option}" ${option === currentFilterValues[idKey] ? 'selected' : ''}>
+          ${option}
+        </option>
+      `).join('');
     }
 
     function renderHeader() {
+      const colors = getThemeColors();
       const filterKeys = Object.keys(FILTER_DEFINITIONS);
-
-      // Carrega a data de atualização específica da página
       const displayedDate = loadLastUpdateDate();
-
 
       const dropdownsHtml = filterKeys.map(key => {
         const definition = FILTER_DEFINITIONS[key];
-
         const kpiOptions = kpiData.map(kpi => kpi[key]);
         const allOptions = [...definition.options, ...kpiOptions].filter((v, i, a) => a.indexOf(v) === i);
-
         const isActive = filterStatus[definition.title] || false;
 
         return `
-                    <div class="flex flex-col text-left mr-4">
-                        <span class="text-xs font-semibold text-gray-500 mb-1">${definition.title}</span>
-                        
-                        <div class="relative inline-block">
-                            <select 
-                                id="filter-select-${key}"
-                                data-filter-key="${key}"
-                                onchange="handleFilterChange(this)"
-                                class="header-filter bg-white text-sm font-medium cursor-pointer py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 ${isActive ? 'filter-active' : ''}"
-                                style="min-width: 200px; border: 1px solid ${AZURE_COLOR}; border-radius: 8px;"
-                            >
-                                ${createFilterOptions(allOptions, key)}
-                            </select>
-                            
-                            <div class="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center">
-                                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="${AZURE_COLOR}">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                `;
+          <div class="flex flex-col text-left mr-4">
+            <span class="text-xs text-gray-500 mb-1">
+                ${definition.title}
+            </span>
+            <div class="relative inline-block">
+              <select 
+                id="filter-select-${key}"
+                data-filter-key="${key}"
+                onchange="handleFilterChange(this)"
+                class="header-filter text-sm font-medium cursor-pointer py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 ${isActive ? 'filter-active' : ''}"
+                style="min-width: 200px; border: 1px solid ${colors.azure}; border-radius: 8px;"
+              >
+                ${createFilterOptions(allOptions, key)}
+              </select>
+              <div class="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center">
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="${colors.azure}">
+                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        `;
       }).join('');
 
       return `
-                <header class="mb-6 pb-4 border-b border-gray-200">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between">
-                        <div class="mb-4 md:mb-0">
-                            <!-- AGORA EXIBE A DATA CARREGADA DO LOCAL STORAGE -->
-                            <p class="text-xs text-gray-500 mt-1">Atualizado em: ${displayedDate}</p>
-                        </div>
-                        <div class="flex flex-wrap gap-3 items-center">
-                            ${dropdownsHtml}
-                        </div>
-                    </div>
-                </header>
-            `;
+        <header class="mb-6 pb-4 border-b border-gray-200">
+          <div class="flex flex-col md:flex-row md:items-center justify-between">
+            <div class="mb-4 md:mb-0">
+              <p class="text-xs text-gray-500 mt-1">Atualizado em: ${displayedDate}</p>
+            </div>
+            <div class="flex flex-wrap gap-3 items-center">
+              ${dropdownsHtml}
+            </div>
+          </div>
+        </header>
+      `;
     }
 
     function filterAndRenderKpis() {
-      // Verifica o status de login para habilitar o link de edição
+      const colors = getThemeColors();
       const isLoggedIn = checkAuthStatus();
-      
       const kpiContainer = document.getElementById('kpi-container');
       if (!kpiContainer) return;
 
-      // Filtra APENAS os cards que correspondem aos filtros
       const filteredKpis = kpiData.filter(kpi => {
         let matchesSpecialty = currentFilterValues.specialty === 'Todos' || kpi.specialty === currentFilterValues.specialty;
         let matchesSubspecialty = currentFilterValues.subspecialty === 'Todos' || kpi.subspecialty === currentFilterValues.subspecialty;
         let matchesModule = currentFilterValues.module === 'Todos' || kpi.module === currentFilterValues.module;
-
         return matchesSpecialty && matchesSubspecialty && matchesModule;
       });
 
       kpiContainer.innerHTML = filteredKpis.map(metric => {
-        
-        const percentage = metric.percentage;
-
+        // CORREÇÃO: Removida a classe 'bg-white'
         return `
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center">
-                        ${getCheckCircleIcon()}
-                        <span class="text-sm font-semibold text-gray-800">${metric.title}</span>
-                    </div>
-                    ${isLoggedIn ? `
-                        <a href="editor.html?page=${FILE_ID}#kpi-card-${metric.id}" class="transition-transform duration-150 transform hover:scale-110" title="Editar este KPI">
-                            ${getEditIcon()}
-                        </a>
-                    ` : ''}
-                </div>
-                <div class="relative pt-1">
-                    <div class="flex mb-1 items-center justify-between">
-                        <span class="text-xs font-semibold inline-block" style="color: ${AZURE_COLOR};">
-                            ${metric.percentage}%
-                        </span>
-                        <span class="text-xs font-medium text-gray-500">
-                            ${metric.current} / ${metric.total}
-                        </span>
-                    </div>
-                    <div class="overflow-hidden h-2 mb-4 text-xs flex rounded-full bg-blue-100">
-                        <div 
-                            style="width: ${metric.percentage}%; background-color: ${AZURE_COLOR};" 
-                            class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center rounded-l-full"
-                        ></div>
-                    </div>
-                </div>
+          <div class="p-4 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center">
+                ${getCheckCircleIcon()}
+                <span class="text-sm font-semibold">${metric.title}</span>
+              </div>
+              ${isLoggedIn ? `
+                <a href="editor.html?page=${FILE_ID}#kpi-card-${metric.id}" class="transition-transform duration-150 transform hover:scale-110" title="Editar este KPI">
+                  ${getEditIcon()}
+                </a>
+              ` : ''}
             </div>
+            <div class="relative pt-1">
+              <div class="flex mb-1 items-center justify-between">
+                <span class="text-xs font-semibold inline-block" style="color: ${colors.azure};">
+                  ${metric.percentage}%
+                </span>
+                <span class="text-xs font-medium text-gray-500">
+                  ${metric.current} / ${metric.total}
+                </span>
+              </div>
+              <div class="overflow-hidden h-2 mb-4 text-xs flex rounded-full bg-blue-100">
+                <div 
+                  style="width: ${metric.percentage}%; background-color: ${colors.azure};" 
+                  class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center rounded-l-full"
+                ></div>
+              </div>
+            </div>
+          </div>
         `;
       }).join('');
     }
@@ -491,71 +637,58 @@
     function handleFilterChange(selectElement) {
       const key = selectElement.getAttribute('data-filter-key');
       currentFilterValues[key] = selectElement.value;
-      // Chamada para renderizar APENAS os KPIs filtrados
-      filterAndRenderKpis(); 
+      filterAndRenderKpis();
     }
 
-    // =================================================================
-    // 4. LÓGICA DO GRÁFICO DE BARRAS (Limites Mensais)
-    // =================================================================
-
     function createMonthlyLimitsChart() {
+      const colors = getThemeColors();
       const dataValues = chartData.monthlyLimits.values;
       const labels = chartData.monthlyLimits.labels;
       const limitHeight = chartData.monthlyLimits.limit;
-      // Cálculo do total: Soma dos valores de produção ao longo do ano.
       const totalSum = dataValues.reduce((sum, value) => sum + value, 0);
 
       let barsHtml = labels.map((label, index) => {
         const height = dataValues[index];
         return `
-                    <div 
-                        data-index="${index}"
-                        data-value="${dataValues[index]}%"
-                        class="flex flex-col items-center h-full justify-end w-6 sm:w-8 mx-1 relative chart-bar group"
-                    >
-                        <!-- Tooltip CORRIGIDO para usar ID único, valor e posicionamento dinâmico -->
-                        <div 
-                            id="tooltip-monthly-${index}" 
-                            class="absolute transform -translate-x-1/2 px-2 py-1 rounded-md text-white shadow-lg pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" 
-                            style="background-color: ${VIOLET_DARK}; top: calc(100% - ${height}% - 28px); left: 50%;"
-                        >
-                            <!-- MOSTRA O VALOR DA BARRA (Total do mês) -->
-                            <span class="text-xs font-bold">${dataValues[index]}</span>
-                            <div class="absolute w-0 h-0 border-x-4 border-t-4 transform -translate-x-1/2" style="bottom: -4px; left: 50%; border-top-color: ${VIOLET_DARK}; border-left-color: transparent; border-right-color: transparent; border-bottom-color: transparent;"></div>
-                        </div>
-                        <div
-                            class="rounded-t-lg transition-all duration-300 ease-out hover:shadow-lg w-full"
-                            style="background: linear-gradient(to top, ${VIOLET_DARK}, ${VIOLET_GRADIENT_END}); height: ${dataValues[index]}%;"
-                            ></div>
-                    </div>
-                `;
+          <div 
+            data-index="${index}"
+            data-value="${dataValues[index]}%"
+            class="flex flex-col items-center h-full justify-end w-6 sm:w-8 mx-1 relative chart-bar group"
+          >
+            <div 
+              id="tooltip-monthly-${index}" 
+              class="absolute transform -translate-x-1/2 px-2 py-1 rounded-md text-white shadow-lg pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" 
+              style="background-color: ${colors.violetDark}; top: calc(100% - ${height}% - 28px); left: 50%;"
+            >
+              <span class="text-xs font-bold">${dataValues[index]}</span>
+              <div class="absolute w-0 h-0 border-x-4 border-t-4 transform -translate-x-1/2" style="bottom: -4px; left: 50%; border-top-color: ${colors.violetDark}; border-left-color: transparent; border-right-color: transparent; border-bottom-color: transparent;"></div>
+            </div>
+            <div
+              class="rounded-t-lg transition-all duration-300 ease-out hover:shadow-lg w-full"
+              style="background: linear-gradient(to top, ${colors.violetDark}, ${colors.violetLight}); height: ${dataValues[index]}%;"
+            ></div>
+          </div>
+        `;
       }).join('');
 
-      // CORREÇÃO TÍTULO: Subtítulo "Limite" removido
+      // CORREÇÃO: Removida a classe 'bg-white'
       return `
-                <div class="bg-white p-6 rounded-xl shadow-sm card-base h-96 flex flex-col hover:shadow-lg">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">${chartData.titleMonthlyLimits} (Total: ${totalSum})</h3>
-                    
-                    <div id="monthly-limits-chart-area" class="flex-grow flex items-end justify-around p-5 bg-gray-50 rounded-lg relative">
-                        <div class="absolute left-0 right-0 border-t-2 border-dashed"
-                            style="bottom: ${limitHeight}%; border-color: ${VIOLET_LIGHT}; height: 2px; width: 100%;">
-                        </div>
-                        ${barsHtml}
-                    </div>
-                    <div class="flex justify-between text-xs text-gray-600 mt-2 px-2">
-                        ${labels.map(m => `<span class="flex-1 text-center font-semibold">${m}</span>`).join('')}
-                    </div>
-                </div>
-            `;
+        <div class="p-6 rounded-xl shadow-sm card-base h-96 flex flex-col hover:shadow-lg">
+          <h3 class="text-lg font-semibold">${chartData.titleMonthlyLimits} (Total: ${totalSum})</h3>
+          <div id="monthly-limits-chart-area" class="flex-grow flex items-end justify-around p-5 bg-gray-50 rounded-lg relative">
+            <div class="absolute left-0 right-0 border-t-2 border-dashed"
+              style="bottom: ${limitHeight}%; border-color: ${colors.violetLight}; height: 2px; width: 100%;">
+            </div>
+            ${barsHtml}
+          </div>
+          <div class="flex justify-between text-xs text-gray-600 mt-2 px-2">
+            ${labels.map(m => `<span class="flex-1 text-center font-semibold">${m}</span>`).join('')}
+          </div>
+        </div>
+      `;
     }
 
-    function setupBarChartInteractivity() {
-      // Deixado vazio intencionalmente. A interatividade agora é tratada por CSS (group/group-hover).
-    }
-
-
-    // 5. LÓGICA DOS GRÁFICOS DE LINHA (Atividades)
+    function setupBarChartInteractivity() {}
 
     const Y_BASE = 140;
     const Y_MAX_POINT = 35;
@@ -566,8 +699,6 @@
       const clampedValue = Math.min(MAX_SCALE_VALUE, value);
       return Y_BASE - (clampedValue / MAX_SCALE_VALUE * PLOTTING_HEIGHT);
     }
-    
-    // calculateTrendLine removido
 
     function generateSvgPoints(values) {
       const numPoints = values.length;
@@ -587,30 +718,28 @@
     }
 
     function generateGridLinesAndLabels() {
-      // Apenas a linha de base X
-      return `<line x1="0" y1="140" x2="300" y2="140" stroke="#ddd" stroke-width="1" />`;
+      const colors = getThemeColors();
+      return `<line x1="0" y1="140" x2="300" y2="140" stroke="${colors.border}" stroke-width="1" />`;
     }
 
     function createTaskLineChartMock(baseTitle) {
+      const colors = getThemeColors();
       let data;
       let goal;
-      let title; // Variável local para o título final
+      let title;
       let isSemestre = false;
       
       if (baseTitle === "Atividades da semana") {
         data = chartData.weeklyActivities;
-        title = chartData.titleWeeklyActivities; // Título customizado do editor
-        goal = data.goal; // Pega a meta do dado
+        title = chartData.titleWeeklyActivities;
+        goal = data.goal;
       } else if (baseTitle === "Atividades do 1º semestre") {
         isSemestre = true;
         data = chartData.semestreActivities;
-        
-        // CORREÇÃO: Remove a informação do semestre do título customizado (que pode ter sido salva com o sufixo)
         const customTitle = chartData.titleSemestreActivities;
         const cleanedTitle = customTitle.replace(/\s*\(\dº Semestre\)/g, '').trim();
         title = `${cleanedTitle}`; 
-        
-        goal = data.goal; // Pega a meta do dado
+        goal = data.goal;
       } else {
         return "";
       }
@@ -618,19 +747,13 @@
       const labels = data.labels;
       const currentValues = data.mockValues;
       const currentPoints = generateSvgPoints(currentValues);
-      
-      // NOVO: Cálculo do total de valores para o título
       const totalSum = currentValues.reduce((sum, value) => sum + value, 0);
 
-      // Converte a meta para a posição Y do SVG
       const goalY = convertValueToSvgY(goal);
-      
-      // Linha de Meta (Goal Setter)
       const goalLineHtml = (goal > 0) ? `
-          <line x1="0" y1="${goalY}" x2="300" y2="${goalY}" stroke="#FCD34D" stroke-width="2" stroke-dasharray="8 4" />
-          <text x="290" y="${goalY - 3}" fill="#FCD34D" font-size="8" text-anchor="end" font-weight="bold">META: ${goal}</text>
+        <line x1="0" y1="${goalY}" x2="300" y2="${goalY}" stroke="#FCD34D" stroke-width="2" stroke-dasharray="8 4" />
+        <text x="290" y="${goalY - 3}" fill="#FCD34D" font-size="8" text-anchor="end" font-weight="bold">META: ${goal}</text>
       ` : '';
-
 
       const coords = currentPoints.split(' ').map(p => {
         const [x, y] = p.split(',');
@@ -638,210 +761,169 @@
       });
 
       const pointsHtml = coords.map((coord, index) => {
-        // CORREÇÃO: Setinha (polígono) reinserida e garantido o posicionamento relativo ao ponto.
         return `
-                    <g transform="translate(${coord.x}, ${coord.y})" class="line-chart-point group">
-                        <!-- Tooltip CORRIGIDO: Posição absoluta dentro do SVG, agora com o triângulo (seta) -->
-                        <g class="opacity-0 group-hover:opacity-100 transition-opacity duration-200" transform="translate(0, 10)">
-                            <rect x="-10" y="-30" width="20" height="20" rx="3" fill="${VIOLET_DARK}" transform="translate(0, -10)"/>
-                            <text x="0" y="-18" text-anchor="middle" fill="white" font-size="8" font-weight="bold" transform="translate(0, -10)">${currentValues[index]}</text>
-                            <polygon points="0,0 -4,10 4,10" fill="${VIOLET_DARK}" transform="translate(0, -10) rotate(180)"/>
-                            
-                        </g>
-                        
-                        <circle cx="0" cy="0" r="15" fill="transparent" cursor="pointer" />
-                        <circle id="${title.replace(/\s/g, '-')}-circle-${index}" cx="0" cy="0" r="3" fill="white" stroke="${VIOLET_DARK}" stroke-width="2" class="transition-all duration-150" />
-                    </g>
-                `;
+          <g transform="translate(${coord.x}, ${coord.y})" class="line-chart-point group">
+            <g class="opacity-0 group-hover:opacity-100 transition-opacity duration-200" transform="translate(0, 10)">
+              <rect x="-10" y="-30" width="20" height="20" rx="3" fill="${colors.violetDark}" transform="translate(0, -10)"/>
+              <text x="0" y="-18" text-anchor="middle" fill="white" font-size="8" font-weight="bold" transform="translate(0, -10)">${currentValues[index]}</text>
+              <polygon points="0,0 -4,10 4,10" fill="${colors.violetDark}" transform="translate(0, -10) rotate(180)"/>
+            </g>
+            <circle cx="0" cy="0" r="15" fill="transparent" cursor="pointer" />
+            <circle id="${title.replace(/\s/g, '-')}-circle-${index}" cx="0" cy="0" r="3" fill="white" stroke="${colors.violetDark}" stroke-width="2" class="transition-all duration-150" />
+          </g>
+        `;
       }).join('');
 
-      // Controles HTML/Legenda removido
       let controlsHtml = ''; 
-      
-      // Ajusta os rótulos do semestre para exibir Jan-Jun ou Jul-Dez
-      const displayLabels = isSemestre ? ((data.semestreRef === '2') ? ['Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'] : ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun']) : labels;
+      const displayLabels = isSemestre ? ((data.semestreRef === '2') ? ['Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dec'] : ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun']) : labels;
 
-
-      // CLASSE shadow-sm E card-base ADICIONADAS AQUI
+      // CORREÇÃO: Removida a classe 'bg-white'
       return `
-                <div class="bg-white p-6 rounded-xl shadow-sm card-base h-96 flex flex-col hover:shadow-lg">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">${title} (Total: ${totalSum})</h3>
-                    <div id="${title.replace(/\s/g, '-')}-chart-area" class="flex-grow flex items-end p-5 bg-gray-50 rounded-lg relative line-chart-area">
-                        <svg viewBox="0 0 300 150" class="w-full h-full" preserveAspectRatio="none"> 
-                            ${generateGridLinesAndLabels()}
-                            ${goalLineHtml} <!-- Linha de Meta -->
-                            <polyline fill="none" stroke="${VIOLET_DARK}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="${currentPoints}" />
-                            ${pointsHtml}
-                        </svg>
-                    </div>
-                    ${controlsHtml}
-                    <div class="flex justify-between text-xs text-gray-600 mt-2">
-                        ${displayLabels.map(m => `<span class="flex-1 text-center font-semibold">${m}</span>`).join('')}
-                    </div>
-                </div>
-            `;
+        <div class="p-6 rounded-xl shadow-sm card-base h-96 flex flex-col hover:shadow-lg">
+          <h3 class="text-lg font-semibold mb-4">${title} (Total: ${totalSum})</h3>
+          <div id="${title.replace(/\s/g, '-')}-chart-area" class="flex-grow flex items-end p-5 bg-gray-50 rounded-lg relative line-chart-area">
+            <svg viewBox="0 0 300 150" class="w-full h-full" preserveAspectRatio="none"> 
+              ${generateGridLinesAndLabels()}
+              ${goalLineHtml}
+              <polyline fill="none" stroke="${colors.violetDark}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="${currentPoints}" />
+              ${pointsHtml}
+            </svg>
+          </div>
+          ${controlsHtml}
+          <div class="flex justify-between text-xs text-gray-600 mt-2">
+            ${displayLabels.map(m => `<span class="flex-1 text-center font-semibold">${m}</span>`).join('')}
+          </div>
+        </div>
+      `;
     }
 
-    function setupLineChartInteractivity(title) {
-      // Deixado vazio intencionalmente. A interatividade agora é tratada por CSS (group/group-hover).
-    }
+    function setupLineChartInteractivity(title) {}
 
-    // =================================================================
-    // NOVO CARD: PROGRESSO SEGMENTADO (Baseado na imagem)
-    // AGORA UTILIZA DADOS CARREGADOS DO chartData e SUPORTA DADOS DINÂMICOS PARA AMBOS OS CARDS
-    // =================================================================
     function createDetailedProgressCard() {
-        // Verifica se a página atual é a página definida para exibir o progresso detalhado
-        if (FILE_ID !== loadProgressPageId()) { // Usa a função loadProgressPageId()
-            return ''; // Não renderiza se não for a página correta
-        }
-        
-        // Busca dados do chartData
-        const detailedData = chartData.detailedProgress;
-        const productionMetrics = detailedData.productionMetrics || [];
-        const reviewMetrics = detailedData.reviewMetrics || []; // NOVO: Métrica de Revisão
+      if (FILE_ID !== loadProgressPageId()) {
+        return '';
+      }
+      
+      // Use as cores do tema para o texto
+      const colors = getThemeColors();
 
-        // NOVO: Busca títulos editáveis
-        const titleCard1 = detailedData.titleCard1 || 'Métricas de Produção'; 
-        const titleCard2 = detailedData.titleCard2 || 'Novo Conteúdo vs. Revisão';
-        
-        // --- CÁLCULOS E HTML PARA CARD 1: PRODUÇÃO ---
-        const totalProduction = productionMetrics.reduce((sum, m) => sum + m.value, 0); 
+      const detailedData = chartData.detailedProgress;
+      const productionMetrics = detailedData.productionMetrics || [];
+      const reviewMetrics = detailedData.reviewMetrics || [];
+      const titleCard1 = detailedData.titleCard1 || 'Métricas de Produção'; 
+      const titleCard2 = detailedData.titleCard2 || 'Novo Conteúdo vs. Revisão';
+      
+      const totalProduction = productionMetrics.reduce((sum, m) => sum + m.value, 0); 
 
-        // 1. Cria as barras de progresso (Card 1)
-        const barsCard1 = productionMetrics.map(metric => {
-            const width = totalProduction > 0 ? ((metric.value / totalProduction) * 100).toFixed(2) : 0; 
-            return `<div style="width: ${width}%; background-color: ${metric.color}; height: 100%;"></div>`;
-        }).join('');
+      const barsCard1 = productionMetrics.map(metric => {
+        const width = totalProduction > 0 ? ((metric.value / totalProduction) * 100).toFixed(2) : 0; 
+        return `<div style="width: ${width}%; background-color: ${metric.color}; height: 100%;"></div>`;
+      }).join('');
 
-        // 2. Cria a lista de status (Legenda Card 1)
-        const statusListCard1 = productionMetrics.map(metric => {
-            return `
-                <div class="flex items-center space-x-1">
-                    <span class="h-2 w-2 rounded-full" style="background-color: ${metric.color};"></span>
-                    <span class="text-sm font-semibold" style="color: #333333;">${metric.label}</span>
-                    <span class="text-sm font-bold" style="color: #333333;">${metric.value}</span>
-                </div>
-            `;
-        }).join('');
-        
-        // --- CÁLCULOS E HTML PARA CARD 2: REVISÃO ---
-        const totalReview = reviewMetrics.reduce((sum, m) => sum + m.value, 0);
-        
-        // 1. Cria as barras de progresso (Card 2)
-        const barsCard2 = reviewMetrics.map(metric => {
-            const width = totalReview > 0 ? ((metric.value / totalReview) * 100).toFixed(2) : 0; 
-            return `<div style="width: ${width}%; background-color: ${metric.color}; height: 100%;"></div>`;
-        }).join('');
-        
-        // 2. Cria a lista de status (Legenda Card 2) - Exibida em linha para simular o layout original
-        const statusListCard2 = reviewMetrics.map(metric => {
-            const percent = totalReview > 0 ? ((metric.value / totalReview) * 100).toFixed(2) : 0;
-            return `
-                <div class="flex flex-col">
-                    <span style="color: #333333;">${metric.label}</span>
-                    <span class="font-bold" style="color: #333333;">${metric.value} — ${percent}%</span>
-                </div>
-            `;
-        }).join('');
-
-
+      const statusListCard1 = productionMetrics.map(metric => {
+        // CORREÇÃO: Usar a variável CSS global --text-primary (herdada do card-base) em vez de cor fixa (#333333)
         return `
-            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <!-- Card 1: Progresso Segmentado (Métricas de Produção) -->
-                <!-- CLASSE shadow-sm E card-base ADICIONADAS AQUI -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">${titleCard1} (Total: ${totalProduction})</h3>
-                    <div class="flex w-full h-3 rounded-full bg-gray-200 overflow-hidden mb-4">
-                        ${barsCard1}
-                    </div>
-                    <div class="flex justify-between flex-wrap gap-2">
-                        ${statusListCard1}
-                    </div>
-                </div>
-
-                <!-- Card 2: Novo Conteúdo vs. Revisão (Métricas Dinâmicas) -->
-                <!-- CLASSE shadow-sm E card-base ADICIONADAS AQUI -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">${titleCard2} (Total: ${totalReview})</h3>
-                    <div class="flex w-full h-3 rounded-full bg-gray-200 overflow-hidden">
-                        ${barsCard2}
-                    </div>
-                    <div class="flex justify-between text-sm mt-2">
-                        ${statusListCard2}
-                    </div>
-                </div>
-            </section>
+          <div class="flex items-center space-x-1">
+            <span class="h-2 w-2 rounded-full" style="background-color: ${metric.color};"></span>
+            <span class="text-sm font-semibold">${metric.label}</span>
+            <span class="text-sm font-bold">${metric.value}</span>
+          </div>
         `;
+      }).join('');
+      
+      const totalReview = reviewMetrics.reduce((sum, m) => sum + m.value, 0);
+      
+      const barsCard2 = reviewMetrics.map(metric => {
+        const width = totalReview > 0 ? ((metric.value / totalReview) * 100).toFixed(2) : 0; 
+        return `<div style="width: ${width}%; background-color: ${metric.color}; height: 100%;"></div>`;
+      }).join('');
+      
+      const statusListCard2 = reviewMetrics.map(metric => {
+        const percent = totalReview > 0 ? ((metric.value / totalReview) * 100).toFixed(2) : 0;
+        // CORREÇÃO: Usar a variável CSS global --text-primary (herdada do card-base) em vez de cor fixa (#333333)
+        return `
+          <div class="flex flex-col">
+            <span>${metric.label}</span>
+            <span class="font-bold">${metric.value} – ${percent}%</span>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <!-- CORREÇÃO: Removida a classe 'bg-white' -->
+          <div class="p-6 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
+            <h3 class="text-lg font-semibold mb-4">${titleCard1} (Total: ${totalProduction})</h3>
+            <div class="flex w-full h-3 rounded-full bg-gray-200 overflow-hidden mb-4">
+              ${barsCard1}
+            </div>
+            <div class="flex justify-between flex-wrap gap-2">
+              ${statusListCard1}
+            </div>
+          </div>
+
+          <!-- CORREÇÃO: Removida a classe 'bg-white' -->
+          <div class="p-6 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
+            <h3 class="text-lg font-semibold mb-4">${titleCard2} (Total: ${totalReview})</h3>
+            <div class="flex w-full h-3 rounded-full bg-gray-200 overflow-hidden">
+              ${barsCard2}
+            </div>
+            <div class="flex justify-between text-sm mt-2">
+              ${statusListCard2}
+            </div>
+          </div>
+        </section>
+      `;
     }
-
-
-    // =================================================================
-    // 6. TOGGLE E RENDERIZAÇÃO PRINCIPAL
-    // NOVO: createDetailedProgressCard() movido para o topo de generalDataHtml
-    // =================================================================
 
     function renderGeneralDataSection() {
-        // O card de progresso detalhado só será renderizado se FILE_ID === progressPageId
-        const detailedCardsHtml = createDetailedProgressCard();
+      const colors = getThemeColors();
+      const detailedCardsHtml = createDetailedProgressCard();
+      const monthlyLimitsHtml = createMonthlyLimitsChart();
+      const weeklyActivitiesHtml = createTaskLineChartMock("Atividades da semana");
+      const semestreActivitiesHtml = createTaskLineChartMock("Atividades do 1º semestre");
+
+      const newChartsHtml = `
+        ${weeklyActivitiesHtml}
+        ${semestreActivitiesHtml}
+        ${monthlyLimitsHtml}
+      `;
+
+      const generalDataHtml = `
+        ${detailedCardsHtml}
         
-        // Mapeia as funções de criação de gráfico para serem chamadas na nova ordem
-        const monthlyLimitsHtml = createMonthlyLimitsChart();
-        const weeklyActivitiesHtml = createTaskLineChartMock("Atividades da semana");
-        const semestreActivitiesHtml = createTaskLineChartMock("Atividades do 1º semestre");
+        <section class="mb-4 ${detailedCardsHtml ? 'mt-8' : ''}">
+          <!-- CORREÇÃO: Removida a classe 'bg-white' -->
+          <div 
+            id="toggle-header"
+            class="p-4 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 card-base hover:shadow-lg transition-colors"
+            onclick="handleToggleGeneralData()"
+          >
+            <h2 class="text-lg font-bold">Dados gerais do mês</h2>
+            <svg id="toggle-arrow" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 transition-transform duration-300 ${showGeneralData ? 'rotate-0' : 'rotate-180'}" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+            </svg>
+          </div>
+        </section>
 
-        // NOVO: Nova Ordem dos Gráficos: Semana, Semestre, Ano (Limites Mensais)
-        const newChartsHtml = `
-            ${weeklyActivitiesHtml}
-            ${semestreActivitiesHtml}
-            ${monthlyLimitsHtml}
-        `;
-
-
-        const generalDataHtml = `
-            <!-- NOVO CARD: PROGRESSO DETALHADO (RENDERIZADO CONDICIONALMENTE) -->
-            ${detailedCardsHtml}
-            
-            <section class="mb-4 ${detailedCardsHtml ? 'mt-8' : ''}"> <!-- Ajusta margem se os cards detalhados estiverem presentes -->
-                <!-- CLASSE shadow-sm E card-base ADICIONADAS AQUI -->
-                <div 
-                    id="toggle-header"
-                    class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 card-base hover:shadow-lg transition-colors"
-                    onclick="handleToggleGeneralData()"
-                >
-                    <h2 class="text-lg font-bold text-gray-800">Dados gerais do mês</h2>
-                    <svg id="toggle-arrow" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 transition-transform duration-300 ${showGeneralData ? 'rotate-0' : 'rotate-180'}" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
-                    </svg>
-                </div>
-            </section>
-
-            <section id="charts-container" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 general-data-container ${showGeneralData ? '' : 'hidden'}">
-                ${newChartsHtml}
-            </section>
-        `;
-        const mainContent = document.getElementById('main-content');
-        if (mainContent) {
-            
-            mainContent.innerHTML = ''; // Limpa o conteúdo
-            
-            // 1. Injeta Header e KPIs (conteúdo padrão)
-            mainContent.innerHTML += renderHeader(); 
-            mainContent.innerHTML += renderKPICards(); 
-            
-            // 2. Injeta a seção de progresso detalhado e gráficos (conteúdo da variável generalDataHtml)
-            mainContent.innerHTML += generalDataHtml;
-
-        }
+        <section id="charts-container" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 general-data-container ${showGeneralData ? '' : 'hidden'}">
+          ${newChartsHtml}
+        </section>
+      `;
+      
+      const mainContent = document.getElementById('main-content');
+      if (mainContent) {
+        mainContent.innerHTML = '';
+        mainContent.innerHTML += renderHeader(); 
+        mainContent.innerHTML += renderKPICards(); 
+        mainContent.innerHTML += generalDataHtml;
+      }
     }
 
     function handleToggleGeneralData() {
       showGeneralData = !showGeneralData;
       const arrow = document.getElementById('toggle-arrow');
       const chartsContainer = document.getElementById('charts-container');
-      // O novo card está fora do charts-container, então não é afetado pelo toggle,
-      // a menos que desejemos incluí-lo também, o que exigiria um container pai.
-      // Mantemos a lógica atual, afetando apenas o container de gráficos.
 
       if (arrow) {
         arrow.classList.toggle('rotate-180', !showGeneralData);
@@ -859,16 +941,12 @@
     }
 
     function renderSidebar() {
-      // Lógica de ativação: Pega o nome do arquivo atual (ex: 'index.html', 'calendario.html')
-      // CORREÇÃO: Usamos o nome do arquivo raiz (location.pathname.split('/').pop())
-      // ou o parâmetro 'page' se estivermos navegando via ?page=xpto.html
+      const colors = getThemeColors();
       const currentURLPage = window.location.pathname.split('/').pop();
       const currentFile = currentURLPage.startsWith('index.html') ? getUrlParameter('page') || 'index.html' : currentURLPage;
-
-      // Verifica o status de login
       const isLoggedIn = checkAuthStatus();
+      const currentTheme = document.documentElement.getAttribute('data-theme');
 
-      // Definição dos itens de navegação (O 'page' é o nome do arquivo)
       const navItems = [
         { name: 'KPI Geral', page: 'index.html' },
         { name: 'KPI Mês', page: 'kpi-mes.html' },
@@ -882,67 +960,79 @@
         { name: 'Calendário', page: 'calendario.html' },
       ];
 
-      // Renderiza a seção de configurações apenas se estiver logado
       const settingsSection = isLoggedIn ? `
-                <div class="px-4 py-4 border-t border-gray-100 relative">
-                    <button 
-                        onclick="toggleSettingsMenu()" 
-                        class="flex items-center p-2 w-full text-left rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200 focus:outline-none"
-                    >
-                        ${getSettingsIcon()}
-                        <span class="ml-3 font-medium">Configurações</span>
-                    </button>
-                    
-                    <div id="settings-options" class="menu-options absolute bottom-14 left-0 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
-                        <a href="editor.html?page=${currentFile}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                            Ir para o editor
-                        </a>
-                        <a href="upload.html?page=${currentFile}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                            Escolher o upload
-                        </a>
-                        <a href="report.html?mode=consolidated" target="_blank" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                            Report
-                        </a>
-                    </div>
-                </div>
-            ` : '';
+        <div class="px-4 py-4 border-t border-gray-100 relative">
+          <button 
+            onclick="toggleSettingsMenu()" 
+            class="flex items-center p-2 w-full text-left rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200 focus:outline-none"
+          >
+            ${getSettingsIcon()}
+            <span class="ml-3 font-medium">Configurações</span>
+          </button>
+          
+          <!-- CORREÇÃO: Removida a classe 'bg-white' -->
+          <div id="settings-options" class="menu-options absolute bottom-14 left-0 w-full border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+            <a href="editor.html?page=${currentFile}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              Ir para o editor
+            </a>
+            <a href="upload.html?page=${currentFile}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              Escolher o upload
+            </a>
+            <a href="report.html?mode=consolidated" target="_blank" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              Report
+            </a>
+          </div>
+        </div>
+      ` : '';
 
-      // Renderiza o botão de Login/Logout
       const authButton = `
-                <div class="px-4 py-4 border-t border-gray-100 relative ${isLoggedIn ? 'mt-auto' : ''}">
-                    <a href="login.html" class="flex items-center p-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
-                        ${getLoginIcon(isLoggedIn)}
-                        <span class="ml-3 font-medium">${isLoggedIn ? 'Logout' : 'Login'}</span>
-                    </a>
-                </div>
-            `;
+        <div class="px-4 py-4 border-t border-gray-100 relative ${isLoggedIn ? 'mt-auto' : ''}">
+          <a href="login.html" class="flex items-center p-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+            ${getLoginIcon(isLoggedIn)}
+            <span class="ml-3 font-medium">${isLoggedIn ? 'Logout' : 'Login'}</span>
+          </a>
+        </div>
+      `;
 
+      const themeToggleSection = `
+        <div class="px-4 py-4 border-t border-gray-100">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-700">Tema</span>
+            <div id="theme-toggle" class="theme-toggle ${currentTheme === 'dark' ? 'active' : ''}" onclick="toggleTheme()">
+              <div class="theme-toggle-slider">
+                ${currentTheme === 'dark' ? getMoonIcon() : getSunIcon()}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
 
       const sidebarContent = `
-                <div class="flex items-center h-20 px-6 border-b border-gray-100">
-                    ${getLogoSvg()}
-                    
-                </div>
+        <!-- CORREÇÃO: Removida a classe 'bg-white' do container do menu de opções -->
+        <div class="flex items-center h-20 px-6 border-b border-gray-100">
+          ${getLogoSvg()}
+        </div>
 
-                <nav class="mt-4 space-y-1 px-4 flex-grow">
-                    ${navItems.map(item => {
-        const isActive = item.page === currentFile;
-        const href = item.page === 'index.html' ? item.page : `index.html?page=${item.page}`;
+        <nav class="mt-4 space-y-1 px-4 flex-grow">
+          ${navItems.map(item => {
+            const isActive = item.page === currentFile;
+            const href = item.page === 'index.html' ? item.page : `index.html?page=${item.page}`;
 
-        return `
-                        <a href="${href}" class="flex items-center p-2 rounded-lg text-sm transition-colors duration-200 ${isActive ? 'text-white shadow-lg' : 'text-gray-700 hover:bg-gray-100'
-          }"
-                        style="${isActive ? 'background-color: ' + AZURE_COLOR + ';' : ''}"
-                        >
-                            <span class="ml-3 font-medium">${item.name}</span>
-                        </a>
-                        `;
-      }).join('')}
-                </nav>
-                
-                ${settingsSection}
-                ${authButton}
+            return `
+              <a href="${href}" class="flex items-center p-2 rounded-lg text-sm transition-colors duration-200 ${isActive ? 'text-white shadow-lg' : 'text-gray-700 hover:bg-gray-100'}"
+              style="${isActive ? 'background-color: ' + colors.azure + ';' : ''}"
+              >
+                <span class="ml-3 font-medium">${item.name}</span>
+              </a>
             `;
+          }).join('')}
+        </nav>
+        
+        ${themeToggleSection}
+        ${settingsSection}
+        ${authButton}
+      `;
+      
       document.getElementById('sidebar').innerHTML = sidebarContent;
 
       document.addEventListener('click', (event) => {
@@ -956,21 +1046,16 @@
     }
 
     function renderApp() {
+      loadTheme();
       renderSidebar();
-
-      // NOTA: O renderGeneralDataSection agora cuida de renderizar Header e KPIs também
-      // para garantir a ordem correta de injeção dos novos cards.
       renderGeneralDataSection();
-
       filterAndRenderKpis();
-      // setupBarChartInteractivity() removida na correção
+      setupBarChartInteractivity();
       setupLineChartInteractivity("Atividades da semana");
       setupLineChartInteractivity("Atividades do 1º semestre");
     }
 
     document.addEventListener('DOMContentLoaded', renderApp);
-
   </script>
 </body>
-
 </html>
