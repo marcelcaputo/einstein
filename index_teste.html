@@ -238,6 +238,38 @@
     <div class="card-base p-8 rounded-xl text-center">
       <div class="loading-spinner mx-auto mb-4"></div>
       <p class="text-lg font-semibold">Carregando dados do Excel...</p>
+      <p id="loading-status" class="text-sm text-gray-500 mt-2"></p>
+    </div>
+  </div>
+
+  <!-- Upload Modal -->
+  <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+    <div class="card-base p-8 rounded-xl max-w-md w-full mx-4">
+      <h3 class="text-xl font-bold mb-4">Carregar Arquivo Excel</h3>
+      <p class="text-sm text-gray-600 mb-4">Selecione um arquivo .xlsx do seu computador para testar localmente</p>
+      
+      <input 
+        type="file" 
+        id="file-input" 
+        accept=".xlsx,.xls"
+        class="w-full p-2 border border-gray-300 rounded-lg mb-4"
+      />
+      
+      <div class="flex gap-2">
+        <button 
+          onclick="uploadLocalFile()" 
+          class="flex-1 px-4 py-2 rounded-lg text-white"
+          style="background-color: var(--azure);"
+        >
+          Carregar
+        </button>
+        <button 
+          onclick="closeUploadModal()" 
+          class="flex-1 px-4 py-2 rounded-lg border border-gray-300"
+        >
+          Cancelar
+        </button>
+      </div>
     </div>
   </div>
 
@@ -263,8 +295,9 @@
     const PROGRESS_PAGE_KEY = 'progressPageId';
     const THEME_KEY = 'theme';
 
-    // URL do arquivo Excel no GitHub (RAW)
-    const EXCEL_URL = 'https://raw.githubusercontent.com/fabricaderecursosdigitais/dashboard/main/Dados.xlsx';
+    // URL do arquivo Excel - tenta primeiro localmente, depois do GitHub
+    const EXCEL_LOCAL_PATH = './Dados.xlsx'; // Arquivo na mesma pasta
+    const EXCEL_GITHUB_URL = 'https://raw.githubusercontent.com/fabricaderecursosdigitais/dashboard/main/Dados.xlsx';
 
     const FILTER_DEFINITIONS = {
       specialty: { title: "Especialidade", options: ["Todos", "Cardiologia", "Pediatria", "Neurologia"] },
@@ -279,21 +312,47 @@
     async function loadExcelFromGitHub() {
       try {
         showLoading(true);
-        console.log('Iniciando carregamento do Excel do GitHub...');
-        console.log('URL:', EXCEL_URL);
         
-        // Busca o arquivo Excel do GitHub
-        const response = await fetch(EXCEL_URL, {
-          method: 'GET',
-          mode: 'cors',
-          cache: 'no-cache'
-        });
+        // Tenta primeiro carregar localmente (mesma pasta)
+        console.log('🔄 Tentando carregar Excel localmente...');
+        console.log('Caminho local:', EXCEL_LOCAL_PATH);
         
-        console.log('Response status:', response.status);
+        let response;
+        let source = 'local';
         
-        if (!response.ok) {
-          throw new Error(`Erro ao buscar arquivo: ${response.status} ${response.statusText}`);
+        try {
+          response = await fetch(EXCEL_LOCAL_PATH, {
+            method: 'GET',
+            cache: 'no-cache'
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Arquivo local não encontrado: ${response.status}`);
+          }
+          
+          console.log('✅ Arquivo local encontrado!');
+        } catch (localError) {
+          console.log('❌ Arquivo local não encontrado, tentando GitHub...');
+          console.log('URL GitHub:', EXCEL_GITHUB_URL);
+          
+          // Se falhar localmente, tenta do GitHub
+          response = await fetch(EXCEL_GITHUB_URL, {
+            method: 'GET',
+            mode: 'cors',
+            cache: 'no-cache'
+          });
+          
+          source = 'GitHub';
+          
+          if (!response.ok) {
+            throw new Error(`Erro ao buscar arquivo do GitHub: ${response.status} ${response.statusText}`);
+          }
+          
+          console.log('✅ Arquivo carregado do GitHub!');
         }
+        
+        console.log(`📁 Fonte: ${source}`);
+        console.log('Response status:', response.status);
         
         // Converte para ArrayBuffer
         const arrayBuffer = await response.arrayBuffer();
@@ -320,10 +379,10 @@
         
         // Salva a data de atualização
         const now = new Date();
-        const dateString = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
+        const dateString = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')} (${source})`;
         localStorage.setItem(DATE_KEY, dateString);
         
-        console.log('✅ Dados carregados com sucesso do Excel!');
+        console.log(`✅ Dados carregados com sucesso do Excel (${source})!`);
         console.log('Total de KPIs:', kpiData.length);
         
         showLoading(false);
@@ -757,10 +816,17 @@
               <p class="text-xs text-gray-500 mt-1">Atualizado em: ${displayedDate}</p>
               <button 
                 onclick="reloadExcelData()" 
-                class="mt-2 px-3 py-1 text-xs rounded-lg transition-colors"
+                class="mt-2 px-3 py-1 text-xs rounded-lg transition-colors mr-2"
                 style="background-color: ${colors.azure}; color: white;"
               >
                 🔄 Recarregar do Excel
+              </button>
+              <button 
+                onclick="openUploadModal()" 
+                class="mt-2 px-3 py-1 text-xs rounded-lg transition-colors"
+                style="background-color: ${colors.violetDark}; color: white;"
+              >
+                📁 Carregar Arquivo Local
               </button>
             </div>
             <div class="flex flex-wrap gap-3 items-center">
@@ -1259,9 +1325,82 @@
       }
     }
 
+    // =================================================================
+    // FUNÇÕES DE UPLOAD LOCAL
+    // =================================================================
+
+    function openUploadModal() {
+      const modal = document.getElementById('upload-modal');
+      if (modal) {
+        modal.style.display = 'flex';
+      }
+    }
+
+    function closeUploadModal() {
+      const modal = document.getElementById('upload-modal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    }
+
+    async function uploadLocalFile() {
+      const fileInput = document.getElementById('file-input');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        alert('Por favor, selecione um arquivo primeiro!');
+        return;
+      }
+      
+      console.log('Arquivo selecionado:', file.name);
+      closeUploadModal();
+      showLoading(true);
+      
+      try {
+        // Lê o arquivo como ArrayBuffer
+        const arrayBuffer = await file.arrayBuffer();
+        console.log('Arquivo lido, tamanho:', arrayBuffer.byteLength, 'bytes');
+        
+        // Processa o Excel
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        console.log('Workbook carregado, planilhas:', workbook.SheetNames);
+        
+        // Processa os dados
+        const data = processExcelData(workbook);
+        console.log('Dados processados:', data);
+        
+        // Limpa e atualiza
+        kpiData.length = 0;
+        data.kpiData.forEach(item => kpiData.push(item));
+        Object.assign(chartData, data.chartData);
+        
+        // Salva no localStorage
+        localStorage.setItem(STORAGE_KEY_KPI, JSON.stringify(kpiData));
+        localStorage.setItem(CHART_STORAGE_KEY_CHART, JSON.stringify(chartData));
+        
+        // Atualiza data
+        const now = new Date();
+        const dateString = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')} (Local)`;
+        localStorage.setItem(DATE_KEY, dateString);
+        
+        // Re-renderiza
+        renderGeneralDataSection();
+        filterAndRenderKpis();
+        
+        showLoading(false);
+        alert(`✅ Arquivo "${file.name}" carregado com sucesso!\nTotal de KPIs: ${kpiData.length}`);
+        
+        // Limpa o input
+        fileInput.value = '';
+        
+      } catch (error) {
+        console.error('Erro ao processar arquivo:', error);
+        showLoading(false);
+        alert(`Erro ao processar arquivo:\n${error.message}\n\nVerifique se o arquivo está no formato correto.`);
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', renderApp);
   </script>
 </body>
-
 </html>
-
