@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EAD - Dashboard Prepara</title>
+  <link rel="icon" href="favicon.png" type="image/png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Biblioteca SheetJS para ler arquivos Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    /* Transições suaves para mudança de tema */
+    * {
+      transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+
+    /* Variáveis de cor para cada tema */
+    :root {
+      --bg-primary: #f9fafb;
+      /* Fundo dos cards e sidebar (cinza claro) */
+      --bg-secondary: #ffffff; 
+      --bg-tertiary: #f3f4f6;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --border-color: #e5e7eb;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --azure: #004f92;
+      --violet-dark: #4F21B9;
+      --violet-light: #D38CFB;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #111827;
+      /* Fundo dos cards e sidebar (cinza escuro) */
+      --bg-secondary: #2a3544; 
+      --bg-tertiary: #374151;
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --border-color: #374151;
+      --shadow: rgba(0, 0, 0, 0.3);
+      --azure: #3b82f6;
+      --violet-dark: #8b5cf6;
+      --violet-light: #c084fc;
+    }
+
+    body {
+      /* Usa a variável de cor de fundo e texto principal */
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    #sidebar {
+      width: 240px;
+      padding-top: 20px;
+      /* Usa a variável para o fundo da sidebar */
+      background-color: var(--bg-secondary); 
+      border-color: var(--border-color);
+    }
+
+    .logo {
+      width: 95%;
+    }
+
+    nav {
+      padding-top: 10px;
+    }
+
+    main {
+      margin-left: 240px;
+    }
+
+    .general-data-container {
+      transition: all 0.5s ease-in-out;
+      max-height: 1000px;
+      overflow: hidden;
+    }
+
+    .general-data-container.hidden {
+      max-height: 0;
+    }
+
+    .rotate-180 {
+      transform: rotate(180deg);
+    }
+
+    .filter-active {
+      background-color: var(--bg-tertiary);
+      font-weight: 600;
+    }
+
+    .menu-options {
+      display: none;
+      background-color: var(--bg-secondary);
+      border-color: var(--border-color);
+    }
+
+    .menu-options.active {
+      display: block;
+    }
+
+    .header-filter {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-image: none;
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
+      border-color: var(--azure);
+    }
+    
+    .card-base {
+      transition: box-shadow 0.3s ease-in-out, transform 0.1s ease-out;
+      /* Usa a variável para o fundo dos cards */
+      background-color: var(--bg-secondary); 
+      border-color: var(--border-color);
+      /* Garante que o texto dentro do card use a cor primária, que muda com o tema */
+      color: var(--text-primary); 
+    }
+
+    .card-base:hover {
+      box-shadow: 0 10px 15px -3px var(--shadow), 0 4px 6px -2px var(--shadow);
+    }
+    
+    #monthly-limits-chart-area {
+      overflow: visible;
+      background-color: var(--bg-tertiary);
+    }
+    
+    .line-chart-area {
+      overflow: visible;
+      background-color: var(--bg-tertiary);
+    }
+    
+    .point-tooltip {
+      position: absolute;
+      pointer-events: none;
+      z-index: 10;
+      transition: opacity 0.2s;
+    }
+
+    /* Toggle Dark Mode */
+    .theme-toggle {
+      position: relative;
+      width: 60px;
+      height: 30px;
+      background-color: var(--border-color);
+      border-radius: 15px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .theme-toggle.active {
+      background-color: var(--azure);
+    }
+
+    .theme-toggle-slider {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      background-color: var(--bg-secondary);
+      border-radius: 50%;
+      transition: transform 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .theme-toggle.active .theme-toggle-slider {
+      transform: translateX(30px);
+    }
+
+    /* Customizações específicas para dark mode */
+    [data-theme="dark"] .text-gray-800 {
+      color: #f9fafb !important;
+    }
+
+    [data-theme="dark"] .text-gray-700 {
+      color: #d1d5db !important;
+    }
+
+    [data-theme="dark"] .text-gray-600 {
+      color: #9ca3af !important;
+    }
+
+    [data-theme="dark"] .text-gray-500 {
+      color: #d0d7e4 !important;
+    }
+
+    [data-theme="dark"] .bg-gray-50 {
+      background-color: #374151 !important;
+    }
+
+    [data-theme="dark"] .bg-gray-100 {
+      background-color: #4b5563 !important;
+    }
+
+    [data-theme="dark"] .border-gray-100,
+    [data-theme="dark"] .border-gray-200 {
+      border-color: #374151 !important;
+    }
+
+    [data-theme="dark"] .hover\:bg-gray-50:hover,
+    [data-theme="dark"] .hover\:bg-gray-100:hover {
+      background-color: #4b5563 !important;
+    }
+
+    [data-theme="dark"] svg path,
+    [data-theme="dark"] svg polyline,
+    [data-theme="dark"] svg line {
+      stroke: currentColor;
+    }
+
+    /* Loading spinner */
+    .loading-spinner {
+      border: 3px solid var(--border-color);
+      border-top: 3px solid var(--azure);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+  </style>
+</head>
+
+<body class="bg-gray-50 font-sans">
+
+  <!-- Loading overlay -->
+  <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+    <div class="card-base p-8 rounded-xl text-center">
+      <div class="loading-spinner mx-auto mb-4"></div>
+      <p class="text-lg font-semibold">Carregando dados do Excel...</p>
+    </div>
+  </div>
+
+  <div id="sidebar" class="border-r border-gray-200 h-screen fixed top-0 left-0 z-30 flex flex-col shadow-xl">
+  </div>
+
+  <main id="main-content" class="flex-1 p-4 sm:p-6">
+  </main>
+
+  <script>
+    // =================================================================
+    // CONSTANTES E CONFIGURAÇÕES
+    // =================================================================
+
+    const AZURE_COLOR = '#004f92';
+    const VIOLET_DARK = '#4F21B9';
+    const GRAY = '#6E6E6E';
+    const VIOLET_LIGHT = '#D38CFB';
+    const VIOLET_GRADIENT_END = '#D38CFB';
+    const FILTERS_STORAGE_KEY_SUFFIX = 'filters';
+    const DATE_STORAGE_KEY_BASE = 'lastUpdateDate';
+    const AUTH_KEY = 'isLoggedIn';
+    const PROGRESS_PAGE_KEY = 'progressPageId';
+    const THEME_KEY = 'theme';
+
+    // URL do arquivo Excel no GitHub (RAW)
+    const EXCEL_URL = 'https://raw.githubusercontent.com/fabricaderecursosdigitais/dashboard/main/Dados.xlsx';
+
+    const FILTER_DEFINITIONS = {
+      specialty: { title: "Especialidade", options: ["Todos", "Cardiologia", "Pediatria", "Neurologia"] },
+      subspecialty: { title: "Subespecialidade", options: ["Todos", "Clínica Geral", "Emergência", "Cirurgia"] },
+      module: { title: "Módulo", options: ["Todos", "Módulo A", "Módulo B", "Módulo C"] }
+    };
+
+    // =================================================================
+    // FUNÇÕES DE LEITURA DO EXCEL
+    // =================================================================
+
+    async function loadExcelFromGitHub() {
+      try {
+        showLoading(true);
+        console.log('Iniciando carregamento do Excel do GitHub...');
+        console.log('URL:', EXCEL_URL);
+        
+        // Busca o arquivo Excel do GitHub
+        const response = await fetch(EXCEL_URL, {
+          method: 'GET',
+          mode: 'cors',
+          cache: 'no-cache'
+        });
+        
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+          throw new Error(`Erro ao buscar arquivo: ${response.status} ${response.statusText}`);
+        }
+        
+        // Converte para ArrayBuffer
+        const arrayBuffer = await response.arrayBuffer();
+        console.log('Arquivo carregado, tamanho:', arrayBuffer.byteLength, 'bytes');
+        
+        // Lê o arquivo Excel usando SheetJS
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        console.log('Workbook carregado, planilhas:', workbook.SheetNames);
+        
+        // Processa os dados do Excel
+        const data = processExcelData(workbook);
+        console.log('Dados processados:', data);
+        
+        // Limpa os arrays atuais
+        kpiData.length = 0;
+        
+        // Atualiza os dados globais
+        data.kpiData.forEach(item => kpiData.push(item));
+        Object.assign(chartData, data.chartData);
+        
+        // Salva no localStorage
+        localStorage.setItem(STORAGE_KEY_KPI, JSON.stringify(kpiData));
+        localStorage.setItem(CHART_STORAGE_KEY_CHART, JSON.stringify(chartData));
+        
+        // Salva a data de atualização
+        const now = new Date();
+        const dateString = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
+        localStorage.setItem(DATE_KEY, dateString);
+        
+        console.log('✅ Dados carregados com sucesso do Excel!');
+        console.log('Total de KPIs:', kpiData.length);
+        
+        showLoading(false);
+        return true;
+      } catch (error) {
+        console.error('❌ Erro ao carregar Excel:', error);
+        console.error('Stack:', error.stack);
+        showLoading(false);
+        
+        // Mostra mensagem mais detalhada
+        const errorMsg = `Erro ao carregar dados do Excel:\n${error.message}\n\nVerifique:\n1. Se o arquivo existe no GitHub\n2. Se a URL está correta\n3. O console do navegador (F12) para mais detalhes`;
+        alert(errorMsg);
+        return false;
+      }
+    }
+
+    function processExcelData(workbook) {
+      console.log('Processando dados do Excel...');
+      
+      // Assume que a primeira planilha contém os dados de KPI
+      const firstSheetName = workbook.SheetNames[0];
+      console.log('Processando planilha:', firstSheetName);
+      
+      const worksheet = workbook.Sheets[firstSheetName];
+      
+      // Converte a planilha para JSON
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+      console.log('Dados brutos da planilha:', jsonData);
+      console.log('Total de linhas:', jsonData.length);
+      
+      // Processa os dados de KPI (assumindo que a primeira linha é cabeçalho)
+      const kpiData = [];
+      const headers = jsonData[0];
+      console.log('Cabeçalhos:', headers);
+      
+      for (let i = 1; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        
+        // Pula linhas vazias
+        if (!row || row.length === 0 || !row[0]) {
+          console.log(`Linha ${i} vazia, pulando...`);
+          continue;
+        }
+        
+        console.log(`Processando linha ${i}:`, row);
+        
+        // Mapeia as colunas do Excel para o formato esperado
+        const current = parseInt(row[1]) || 0;
+        const total = parseInt(row[2]) || 100;
+        const percentage = row[3] ? parseInt(row[3]) : Math.round((current / total) * 100);
+        
+        const kpiItem = {
+          id: i,
+          title: String(row[0] || `Item ${i}`),
+          current: current,
+          total: total,
+          percentage: percentage,
+          specialty: String(row[4] || "Todos"),
+          subspecialty: String(row[5] || "Todos"),
+          module: String(row[6] || "Todos")
+        };
+        
+        console.log(`KPI criado:`, kpiItem);
+        kpiData.push(kpiItem);
+      }
+      
+      console.log('Total de KPIs processados:', kpiData.length);
+      
+      // Processa dados de gráficos (se houver outras planilhas)
+      let chartData = JSON.parse(JSON.stringify(initialChartData)); // Deep clone
+      
+      // Verifica se há planilha de gráficos
+      if (workbook.SheetNames.length > 1) {
+        console.log('Processando segunda planilha para gráficos...');
+        const chartSheetName = workbook.SheetNames[1];
+        const chartWorksheet = workbook.Sheets[chartSheetName];
+        const chartJsonData = XLSX.utils.sheet_to_json(chartWorksheet, { header: 1 });
+        
+        console.log('Dados de gráficos:', chartJsonData);
+        
+        // Processa dados mensais (assumindo formato específico)
+        if (chartJsonData.length > 1) {
+          const monthlyValues = [];
+          for (let i = 1; i <= 12 && i < chartJsonData.length; i++) {
+            const value = parseInt(chartJsonData[i][1]) || 0;
+            monthlyValues.push(value);
+          }
+          
+          if (monthlyValues.length > 0) {
+            chartData.monthlyLimits.values = monthlyValues;
+            console.log('Valores mensais atualizados:', monthlyValues);
+          }
+        }
+      }
+      
+      return { kpiData, chartData };
+    }
+
+    function showLoading(show) {
+      const overlay = document.getElementById('loading-overlay');
+      if (overlay) {
+        overlay.style.display = show ? 'flex' : 'none';
+      }
+    }
+
+    // =================================================================
+    // FUNÇÕES DE TEMA
+    // =================================================================
+
+    function loadTheme() {
+      const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      return savedTheme;
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem(THEME_KEY, newTheme);
+      
+      // Atualiza o visual do toggle
+      const toggle = document.getElementById('theme-toggle');
+      if (toggle) {
+        toggle.classList.toggle('active', newTheme === 'dark');
+        const slider = toggle.querySelector('.theme-toggle-slider');
+        if (slider) {
+          slider.innerHTML = newTheme === 'dark' ? getMoonIcon() : getSunIcon();
+        }
+      }
+      
+      // Atualiza cores dos gráficos
+      updateChartColors();
+    }
+
+    function updateChartColors() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      // Força re-render dos gráficos com as novas cores
+      renderGeneralDataSection();
+      filterAndRenderKpis();
+    }
+
+    function getThemeColors() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      return {
+        azure: isDark ? '#3b82f6' : '#004f92',
+        violetDark: isDark ? '#8b5cf6' : '#4F21B9',
+        violetLight: isDark ? '#c084fc' : '#D38CFB',
+        text: isDark ? '#f9fafb' : '#1f2937',
+        textSecondary: isDark ? '#9ca3af' : '#6b7280',
+        border: isDark ? '#374151' : '#e5e7eb'
+      };
+    }
+
+    // =================================================================
+    // FUNÇÕES AUXILIARES
+    // =================================================================
+
+    function getUrlParameter(name) {
+      name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+      const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+      const results = regex.exec(location.search);
+      return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' ')); 
+    }
+
+    const currentURLPage = window.location.pathname.split('/').pop();
+    const FILE_ID = getUrlParameter('page') || currentURLPage;
+
+    const STORAGE_KEY_KPI = `kpi_${FILE_ID}`;
+    const CHART_STORAGE_KEY_CHART = `chart_${FILE_ID}`;
+    const DATE_KEY = `${DATE_STORAGE_KEY_BASE}_${FILE_ID}`;
+
+    const initialKpiData = [
+      { id: 1, title: 'Material para Gravação', current: 102, total: 600, percentage: 17, specialty: "Cardiologia", subspecialty: "Clínica Geral", module: "Módulo A" },
+      { id: 2, title: 'Agendamento', current: 106, total: 600, percentage: 18, specialty: "Cardiologia", subspecialty: "Emergência", module: "Módulo B" },
+      { id: 3, title: 'Edição', current: 89, total: 600, percentage: 15, specialty: "Pediatria", subspecialty: "Clínica Geral", module: "Módulo C" },
+      { id: 4, title: 'Total de Vídeos', current: 70, total: 600, percentage: 12, specialty: "Pediatria", subspecialty: "Emergência", module: "Módulo A" },
+      { id: 5, title: 'Total de Flashcards', current: 119, total: 2500, percentage: 5, specialty: "Neurologia", subspecialty: "Cirurgia", module: "Módulo B" },
+      { id: 6, title: 'Total de Questões', current: 377, total: 3000, percentage: 11, specialty: "Neurologia", subspecialty: "Clínica Geral", module: "Módulo C" },
+      { id: 7, title: 'Total de Mapas Conceituais', current: 8, total: 100, percentage: 8, specialty: "Todos", subspecialty: "Todos", module: "Módulo A" },
+      { id: 8, title: 'Total de Apostilas', current: 112, total: 173, percentage: 65, specialty: "Cardiologia", subspecialty: "Emergência", module: "Módulo B" },
+      { id: 9, title: 'Conteúdo Cadastrado', current: 69, total: 6373, percentage: 1, specialty: "Pediatria", subspecialty: "Cirurgia", module: "Módulo C" },
+    ];
+
+    const initialChartData = {
+      titleMonthlyLimits: 'Limites Mensais',
+      titleWeeklyActivities: 'Atividades da Semana',
+      titleSemestreActivities: 'Atividades do 1º Semestre',
+      monthlyLimits: {
+        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+        values: [40, 70, 90, 50, 100, 60, 30, 80, 55, 75, 45, 65],
+        limit: 75
+      },
+      weeklyActivities: {
+        labels: ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'],
+        mockValues: [20, 15, 25, 18, 30, 22, 19],
+        goal: 30
+      },
+      semestreActivities: {
+        labels: ['J', 'F', 'M', 'A', 'M', 'J'],
+        mockValues: [5, 7, 3, 9, 6, 11],
+        goal: 10,
+        semestreRef: '1'
+      },
+      detailedProgress: {
+        titleCard1: 'Métricas de Produção',
+        titleCard2: 'Novo Conteúdo vs. Revisão',
+        productionMetrics: [
+          { label: 'Total de Imagens Produzidas', value: 322, color: '#38A169' },
+          { label: 'Ajustes', value: 54, color: '#90EE90' },
+          { label: 'Novas', value: 268, color: '#50C878' },
+          { label: 'Análise', value: 0, color: '#C0C0C0' }
+        ],
+        reviewMetrics: [
+          { label: 'Novo', value: 130, color: '#38A169' }, 
+          { label: 'Atualização', value: 72, color: '#FCD34D' }
+        ]
+      }
+    };
+
+    const initialFilterStatus = {
+      Especialidade: false,
+      Subespecialidade: false,
+      Módulo: false,
+      Todos: true,
+    };
+
+    let currentFilterValues = {
+      specialty: 'Todos',
+      subspecialty: 'Todos',
+      module: 'Todos'
+    };
+
+    function loadKpiData() {
+      const storedData = localStorage.getItem(STORAGE_KEY_KPI);
+      let data = storedData ? JSON.parse(storedData) : initialKpiData;
+      return data.map(item => ({
+        ...item,
+        specialty: item.specialty || "Todos",
+        subspecialty: item.subspecialty || "Todos",
+        module: item.module || "Todos",
+      }));
+    }
+
+    function loadChartData() {
+      const storedData = localStorage.getItem(CHART_STORAGE_KEY_CHART);
+      let data = storedData ? JSON.parse(storedData) : initialChartData;
+      
+      if (data.titleMonthlyLimits === undefined) data.titleMonthlyLimits = initialChartData.titleMonthlyLimits;
+      if (data.titleWeeklyActivities === undefined) data.titleWeeklyActivities = initialChartData.titleWeeklyActivities;
+      if (data.titleSemestreActivities === undefined) data.titleSemestreActivities = initialChartData.titleSemestreActivities;
+      
+      if (!data.detailedProgress) {
+        data.detailedProgress = initialChartData.detailedProgress;
+      } else {
+        if (data.weeklyActivities.goal === undefined) data.weeklyActivities.goal = initialChartData.weeklyActivities.goal;
+        if (data.semestreActivities.goal === undefined) data.semestreActivities.goal = initialChartData.semestreActivities.goal;
+        if (data.semestreActivities.semestreRef === undefined) data.semestreActivities.semestreRef = initialChartData.semestreActivities.semestreRef;
+
+        const detailed = data.detailedProgress;
+        if (!detailed) { data.detailedProgress = initialChartData.detailedProgress; return data; }
+
+        if (!detailed.productionMetrics) {
+          detailed.productionMetrics = initialChartData.detailedProgress.productionMetrics;
+        }
+        
+        if (!detailed.reviewMetrics) {
+          if (detailed.novoValor !== undefined && detailed.atualizacaoValor !== undefined) {
+            detailed.reviewMetrics = [
+              { label: 'Novo', value: detailed.novoValor, color: initialChartData.detailedProgress.reviewMetrics[0].color },
+              { label: 'Atualização', value: detailed.atualizacaoValor, color: initialChartData.detailedProgress.reviewMetrics[1].color }
+            ];
+            delete detailed.novoValor;
+            delete detailed.atualizacaoValor;
+          } else {
+            detailed.reviewMetrics = initialChartData.detailedProgress.reviewMetrics;
+          }
+        }
+        
+        if (detailed.titleCard1 === undefined) {
+          detailed.titleCard1 = initialChartData.detailedProgress.titleCard1;
+        }
+        if (detailed.titleCard2 === undefined) {
+          detailed.titleCard2 = initialChartData.detailedProgress.titleCard2;
+        }
+      }
+      
+      return data;
+    }
+
+    function loadFilterStatus() {
+      const storedData = localStorage.getItem(FILTERS_STORAGE_KEY_SUFFIX);
+      return storedData ? JSON.parse(storedData) : initialFilterStatus;
+    }
+
+    function loadProgressPageId() {
+      return localStorage.getItem(PROGRESS_PAGE_KEY) || 'index.html';
+    }
+
+    function loadLastUpdateDate() {
+      return localStorage.getItem(DATE_KEY) || 'Nenhuma modificação salva';
+    }
+
+    function checkAuthStatus() {
+      return localStorage.getItem(AUTH_KEY) === 'true';
+    }
+
+    const kpiData = loadKpiData();
+    const chartData = loadChartData();
+    const filterStatus = loadFilterStatus();
+    const lastUpdateDate = loadLastUpdateDate();
+    const progressPageId = loadProgressPageId();
+
+    let showGeneralData = true;
+
+    // =================================================================
+    // ÍCONES
+    // =================================================================
+
+    const getEditIcon = () => {
+      const colors = getThemeColors();
+      return `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-colors" fill="none" viewBox="0 0 24 24" stroke="${colors.azure}" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      `;
+    };
+
+    const getCheckCircleIcon = () => {
+      const colors = getThemeColors();
+      return `
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${colors.azure}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+      `;
+    };
+
+    const getSidebarIcon = (active) => `
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 ${active ? 'text-white' : 'text-indigo-600'}" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+    `;
+
+    const getLoginIcon = (isLoggedIn) => `
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+      </svg>
+    `;
+
+    const getSettingsIcon = () => `
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 012-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+    `;
+
+    const getLogoSvg = () => `<img src="logo.png" alt="Logo Einstein">`;
+
+    const getSunIcon = () => `
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line>
+        <line x1="21" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+      </svg>
+    `;
+
+    const getMoonIcon = () => `
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+    `;
+
+    // =================================================================
+    // RENDERIZAÇÃO
+    // =================================================================
+
+    function createFilterOptions(options, idKey) {
+      const uniqueOptions = [...new Set(options)].sort();
+      return uniqueOptions.map(option => `
+        <option value="${option}" ${option === currentFilterValues[idKey] ? 'selected' : ''}>
+          ${option}
+        </option>
+      `).join('');
+    }
+
+    function renderHeader() {
+      const colors = getThemeColors();
+      const filterKeys = Object.keys(FILTER_DEFINITIONS);
+      const displayedDate = loadLastUpdateDate();
+
+      const dropdownsHtml = filterKeys.map(key => {
+        const definition = FILTER_DEFINITIONS[key];
+        const kpiOptions = kpiData.map(kpi => kpi[key]);
+        const allOptions = [...definition.options, ...kpiOptions].filter((v, i, a) => a.indexOf(v) === i);
+        const isActive = filterStatus[definition.title] || false;
+
+        return `
+          <div class="flex flex-col text-left mr-4">
+            <span class="text-xs text-gray-500 mb-1">
+                ${definition.title}
+            </span>
+            <div class="relative inline-block">
+              <select 
+                id="filter-select-${key}"
+                data-filter-key="${key}"
+                onchange="handleFilterChange(this)"
+                class="header-filter text-sm font-medium cursor-pointer py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 ${isActive ? 'filter-active' : ''}"
+                style="min-width: 200px; border: 1px solid ${colors.azure}; border-radius: 8px;"
+              >
+                ${createFilterOptions(allOptions, key)}
+              </select>
+              <div class="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center">
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="${colors.azure}">
+                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <header class="mb-6 pb-4 border-b border-gray-200">
+          <div class="flex flex-col md:flex-row md:items-center justify-between">
+            <div class="mb-4 md:mb-0">
+              <p class="text-xs text-gray-500 mt-1">Atualizado em: ${displayedDate}</p>
+              <button 
+                onclick="reloadExcelData()" 
+                class="mt-2 px-3 py-1 text-xs rounded-lg transition-colors"
+                style="background-color: ${colors.azure}; color: white;"
+              >
+                🔄 Recarregar do Excel
+              </button>
+            </div>
+            <div class="flex flex-wrap gap-3 items-center">
+              ${dropdownsHtml}
+            </div>
+          </div>
+        </header>
+      `;
+    }
+
+    function filterAndRenderKpis() {
+      const colors = getThemeColors();
+      const isLoggedIn = checkAuthStatus();
+      const kpiContainer = document.getElementById('kpi-container');
+      if (!kpiContainer) return;
+
+      const filteredKpis = kpiData.filter(kpi => {
+        let matchesSpecialty = currentFilterValues.specialty === 'Todos' || kpi.specialty === currentFilterValues.specialty;
+        let matchesSubspecialty = currentFilterValues.subspecialty === 'Todos' || kpi.subspecialty === currentFilterValues.subspecialty;
+        let matchesModule = currentFilterValues.module === 'Todos' || kpi.module === currentFilterValues.module;
+        return matchesSpecialty && matchesSubspecialty && matchesModule;
+      });
+
+      kpiContainer.innerHTML = filteredKpis.map(metric => {
+        return `
+          <div class="p-4 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center">
+                ${getCheckCircleIcon()}
+                <span class="text-sm font-semibold">${metric.title}</span>
+              </div>
+              ${isLoggedIn ? `
+                <a href="editor.html?page=${FILE_ID}#kpi-card-${metric.id}" class="transition-transform duration-150 transform hover:scale-110" title="Editar este KPI">
+                  ${getEditIcon()}
+                </a>
+              ` : ''}
+            </div>
+            <div class="relative pt-1">
+              <div class="flex mb-1 items-center justify-between">
+                <span class="text-xs font-semibold inline-block" style="color: ${colors.azure};">
+                  ${metric.percentage}%
+                </span>
+                <span class="text-xs font-medium text-gray-500">
+                  ${metric.current} / ${metric.total}
+                </span>
+              </div>
+              <div class="overflow-hidden h-2 mb-4 text-xs flex rounded-full bg-blue-100">
+                <div 
+                  style="width: ${metric.percentage}%; background-color: ${colors.azure};" 
+                  class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center rounded-l-full"
+                ></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderKPICards() {
+      return `<section id="kpi-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8"></section>`;
+    }
+
+    function handleFilterChange(selectElement) {
+      const key = selectElement.getAttribute('data-filter-key');
+      currentFilterValues[key] = selectElement.value;
+      filterAndRenderKpis();
+    }
+
+    function createMonthlyLimitsChart() {
+      const colors = getThemeColors();
+      const dataValues = chartData.monthlyLimits.values;
+      const labels = chartData.monthlyLimits.labels;
+      const limitHeight = chartData.monthlyLimits.limit;
+      const totalSum = dataValues.reduce((sum, value) => sum + value, 0);
+
+      let barsHtml = labels.map((label, index) => {
+        const height = dataValues[index];
+        return `
+          <div 
+            data-index="${index}"
+            data-value="${dataValues[index]}%"
+            class="flex flex-col items-center h-full justify-end w-6 sm:w-8 mx-1 relative chart-bar group"
+          >
+            <div 
+              id="tooltip-monthly-${index}" 
+              class="absolute transform -translate-x-1/2 px-2 py-1 rounded-md text-white shadow-lg pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" 
+              style="background-color: ${colors.violetDark}; top: calc(100% - ${height}% - 28px); left: 50%;"
+            >
+              <span class="text-xs font-bold">${dataValues[index]}</span>
+              <div class="absolute w-0 h-0 border-x-4 border-t-4 transform -translate-x-1/2" style="bottom: -4px; left: 50%; border-top-color: ${colors.violetDark}; border-left-color: transparent; border-right-color: transparent; border-bottom-color: transparent;"></div>
+            </div>
+            <div
+              class="rounded-t-lg transition-all duration-300 ease-out hover:shadow-lg w-full"
+              style="background: linear-gradient(to top, ${colors.violetDark}, ${colors.violetLight}); height: ${dataValues[index]}%;"
+            ></div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="p-6 rounded-xl shadow-sm card-base h-96 flex flex-col hover:shadow-lg">
+          <h3 class="text-lg font-semibold mb-4">${chartData.titleMonthlyLimits} (Total: ${totalSum})</h3>
+          <div id="monthly-limits-chart-area" class="flex-grow flex items-end justify-around p-5 bg-gray-50 rounded-lg relative">
+            <div class="absolute left-0 right-0 border-t-2 border-dashed"
+              style="bottom: ${limitHeight}%; border-color: ${colors.violetLight}; height: 2px; width: 100%;">
+            </div>
+            ${barsHtml}
+          </div>
+          <div class="flex justify-between text-xs text-gray-600 mt-2 px-2">
+            ${labels.map(m => `<span class="flex-1 text-center font-semibold">${m}</span>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function setupBarChartInteractivity() {}
+
+    const Y_BASE = 140;
+    const Y_MAX_POINT = 35;
+    const MAX_SCALE_VALUE = 40;
+
+    function convertValueToSvgY(value) {
+      const PLOTTING_HEIGHT = Y_BASE - Y_MAX_POINT;
+      const clampedValue = Math.min(MAX_SCALE_VALUE, value);
+      return Y_BASE - (clampedValue / MAX_SCALE_VALUE * PLOTTING_HEIGHT);
+    }
+
+    function generateSvgPoints(values) {
+      const numPoints = values.length;
+      if (numPoints === 0) return "";
+      let points = [];
+      const TOTAL_WIDTH = 300;
+      const H_PADDING = 10;
+      const PLOTTING_WIDTH = TOTAL_WIDTH - (2 * H_PADDING);
+      const step = PLOTTING_WIDTH / (numPoints - 1);
+
+      for (let i = 0; i < numPoints; i++) {
+        const x = H_PADDING + i * step;
+        const y = convertValueToSvgY(values[i]);
+        points.push(`${x},${y}`);
+      }
+      return points.join(' ');
+    }
+
+    function generateGridLinesAndLabels() {
+      const colors = getThemeColors();
+      return `<line x1="0" y1="140" x2="300" y2="140" stroke="${colors.border}" stroke-width="1" />`;
+    }
+
+    function createTaskLineChartMock(baseTitle) {
+      const colors = getThemeColors();
+      let data;
+      let goal;
+      let title;
+      let isSemestre = false;
+      
+      if (baseTitle === "Atividades da semana") {
+        data = chartData.weeklyActivities;
+        title = chartData.titleWeeklyActivities;
+        goal = data.goal;
+      } else if (baseTitle === "Atividades do 1º semestre") {
+        isSemestre = true;
+        data = chartData.semestreActivities;
+        const customTitle = chartData.titleSemestreActivities;
+        const cleanedTitle = customTitle.replace(/\s*\(\dº Semestre\)/g, '').trim();
+        title = `${cleanedTitle}`; 
+        goal = data.goal;
+      } else {
+        return "";
+      }
+
+      const labels = data.labels;
+      const currentValues = data.mockValues;
+      const currentPoints = generateSvgPoints(currentValues);
+      const totalSum = currentValues.reduce((sum, value) => sum + value, 0);
+
+      const goalY = convertValueToSvgY(goal);
+      const goalLineHtml = (goal > 0) ? `
+        <line x1="0" y1="${goalY}" x2="300" y2="${goalY}" stroke="#FCD34D" stroke-width="2" stroke-dasharray="8 4" />
+        <text x="290" y="${goalY - 3}" fill="#FCD34D" font-size="8" text-anchor="end" font-weight="bold">META: ${goal}</text>
+      ` : '';
+
+      const coords = currentPoints.split(' ').map(p => {
+        const [x, y] = p.split(',');
+        return { x: parseFloat(x), y: parseFloat(y) };
+      });
+
+      const pointsHtml = coords.map((coord, index) => {
+        return `
+          <g transform="translate(${coord.x}, ${coord.y})" class="line-chart-point group">
+            <g class="opacity-0 group-hover:opacity-100 transition-opacity duration-200" transform="translate(0, 10)">
+              <rect x="-10" y="-30" width="20" height="20" rx="3" fill="${colors.violetDark}" transform="translate(0, -10)"/>
+              <text x="0" y="-18" text-anchor="middle" fill="white" font-size="8" font-weight="bold" transform="translate(0, -10)">${currentValues[index]}</text>
+              <polygon points="0,0 -4,10 4,10" fill="${colors.violetDark}" transform="translate(0, -10) rotate(180)"/>
+            </g>
+            <circle cx="0" cy="0" r="15" fill="transparent" cursor="pointer" />
+            <circle id="${title.replace(/\s/g, '-')}-circle-${index}" cx="0" cy="0" r="3" fill="white" stroke="${colors.violetDark}" stroke-width="2" class="transition-all duration-150" />
+          </g>
+        `;
+      }).join('');
+
+      let controlsHtml = ''; 
+      const displayLabels = isSemestre ? ((data.semestreRef === '2') ? ['Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'] : ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun']) : labels;
+
+      return `
+        <div class="p-6 rounded-xl shadow-sm card-base h-96 flex flex-col hover:shadow-lg">
+          <h3 class="text-lg font-semibold mb-4">${title} (Total: ${totalSum})</h3>
+          <div id="${title.replace(/\s/g, '-')}-chart-area" class="flex-grow flex items-end p-5 bg-gray-50 rounded-lg relative line-chart-area">
+            <svg viewBox="0 0 300 150" class="w-full h-full" preserveAspectRatio="none"> 
+              ${generateGridLinesAndLabels()}
+              ${goalLineHtml}
+              <polyline fill="none" stroke="${colors.violetDark}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="${currentPoints}" />
+              ${pointsHtml}
+            </svg>
+          </div>
+          ${controlsHtml}
+          <div class="flex justify-between text-xs text-gray-600 mt-2">
+            ${displayLabels.map(m => `<span class="flex-1 text-center font-semibold">${m}</span>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function setupLineChartInteractivity(title) {}
+
+    function createDetailedProgressCard() {
+      if (FILE_ID !== loadProgressPageId()) {
+        return '';
+      }
+      
+      const colors = getThemeColors();
+
+      const detailedData = chartData.detailedProgress;
+      const productionMetrics = detailedData.productionMetrics || [];
+      const reviewMetrics = detailedData.reviewMetrics || [];
+      const titleCard1 = detailedData.titleCard1 || 'Métricas de Produção'; 
+      const titleCard2 = detailedData.titleCard2 || 'Novo Conteúdo vs. Revisão';
+      
+      const totalProduction = productionMetrics.reduce((sum, m) => sum + m.value, 0); 
+
+      const barsCard1 = productionMetrics.map(metric => {
+        const width = totalProduction > 0 ? ((metric.value / totalProduction) * 100).toFixed(2) : 0; 
+        return `<div style="width: ${width}%; background-color: ${metric.color}; height: 100%;"></div>`;
+      }).join('');
+
+      const statusListCard1 = productionMetrics.map(metric => {
+        return `
+          <div class="flex items-center space-x-1">
+            <span class="h-2 w-2 rounded-full" style="background-color: ${metric.color};"></span>
+            <span class="text-sm font-semibold">${metric.label}</span>
+            <span class="text-sm font-bold">${metric.value}</span>
+          </div>
+        `;
+      }).join('');
+      
+      const totalReview = reviewMetrics.reduce((sum, m) => sum + m.value, 0);
+      
+      const barsCard2 = reviewMetrics.map(metric => {
+        const width = totalReview > 0 ? ((metric.value / totalReview) * 100).toFixed(2) : 0; 
+        return `<div style="width: ${width}%; background-color: ${metric.color}; height: 100%;"></div>`;
+      }).join('');
+      
+      const statusListCard2 = reviewMetrics.map(metric => {
+        const percent = totalReview > 0 ? ((metric.value / totalReview) * 100).toFixed(2) : 0;
+        return `
+          <div class="flex flex-col">
+            <span>${metric.label}</span>
+            <span class="font-bold">${metric.value} – ${percent}%</span>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div class="p-6 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
+            <h3 class="text-lg font-semibold mb-4">${titleCard1} (Total: ${totalProduction})</h3>
+            <div class="flex w-full h-3 rounded-full bg-gray-200 overflow-hidden mb-4">
+              ${barsCard1}
+            </div>
+            <div class="flex justify-between flex-wrap gap-2">
+              ${statusListCard1}
+            </div>
+          </div>
+
+          <div class="p-6 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
+            <h3 class="text-lg font-semibold mb-4">${titleCard2} (Total: ${totalReview})</h3>
+            <div class="flex w-full h-3 rounded-full bg-gray-200 overflow-hidden">
+              ${barsCard2}
+            </div>
+            <div class="flex justify-between text-sm mt-2">
+              ${statusListCard2}
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderGeneralDataSection() {
+      const colors = getThemeColors();
+      const detailedCardsHtml = createDetailedProgressCard();
+      const monthlyLimitsHtml = createMonthlyLimitsChart();
+      const weeklyActivitiesHtml = createTaskLineChartMock("Atividades da semana");
+      const semestreActivitiesHtml = createTaskLineChartMock("Atividades do 1º semestre");
+
+      const newChartsHtml = `
+        ${weeklyActivitiesHtml}
+        ${semestreActivitiesHtml}
+        ${monthlyLimitsHtml}
+      `;
+
+      const generalDataHtml = `
+        ${detailedCardsHtml}
+        
+        <section class="mb-4 ${detailedCartsHtml ? 'mt-8' : ''}">
+          <div 
+            id="toggle-header"
+            class="p-4 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 card-base hover:shadow-lg transition-colors"
+            onclick="handleToggleGeneralData()"
+          >
+            <h2 class="text-lg font-bold">Dados gerais do mês</h2>
+            <svg id="toggle-arrow" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 transition-transform duration-300 ${showGeneralData ? 'rotate-0' : 'rotate-180'}" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+            </svg>
+          </div>
+        </section>
+
+        <section id="charts-container" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 general-data-container ${showGeneralData ? '' : 'hidden'}">
+          ${newChartsHtml}
+        </section>
+      `;
+      
+      const mainContent = document.getElementById('main-content');
+      if (mainContent) {
+        mainContent.innerHTML = '';
+        mainContent.innerHTML += renderHeader(); 
+        mainContent.innerHTML += renderKPICards(); 
+        mainContent.innerHTML += generalDataHtml;
+      }
+    }
+
+    function handleToggleGeneralData() {
+      showGeneralData = !showGeneralData;
+      const arrow = document.getElementById('toggle-arrow');
+      const chartsContainer = document.getElementById('charts-container');
+
+      if (arrow) {
+        arrow.classList.toggle('rotate-180', !showGeneralData);
+      }
+      if (chartsContainer) {
+        chartsContainer.classList.toggle('hidden', !showGeneralData);
+      }
+    }
+
+    function toggleSettingsMenu() {
+      const menu = document.getElementById('settings-options');
+      if (menu) {
+        menu.classList.toggle('active');
+      }
+    }
+
+    function renderSidebar() {
+      const colors = getThemeColors();
+      const currentURLPage = window.location.pathname.split('/').pop();
+      const currentFile = currentURLPage.startsWith('index.html') ? getUrlParameter('page') || 'index.html' : currentURLPage;
+      const isLoggedIn = checkAuthStatus();
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+
+      const navItems = [
+        { name: 'KPI Geral', page: 'index.html' },
+        { name: 'KPI Mês', page: 'kpi-mes.html' },
+        { name: 'Vídeos', page: 'videos.html' },
+        { name: 'Flashcards', page: 'flashcards.html' },
+        { name: 'Questões', page: 'questoes.html' },
+        { name: 'Mapas + Apostila', page: 'mapas.html' },
+        { name: 'Cadastros', page: 'cadastros.html' },
+        { name: 'KPI AV', page: 'kpi-av.html' },
+        { name: 'Status AV', page: 'status-av.html' },
+        { name: 'Calendário', page: 'calendario.html' },
+      ];
+
+      const settingsSection = isLoggedIn ? `
+        <div class="px-4 py-4 border-t border-gray-100 relative">
+          <button 
+            onclick="toggleSettingsMenu()" 
+            class="flex items-center p-2 w-full text-left rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200 focus:outline-none"
+          >
+            ${getSettingsIcon()}
+            <span class="ml-3 font-medium">Configurações</span>
+          </button>
+          
+          <div id="settings-options" class="menu-options absolute bottom-14 left-0 w-full border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+            <a href="editor.html?page=${currentFile}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              Ir para o editor
+            </a>
+            <a href="upload.html?page=${currentFile}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              Escolher o upload
+            </a>
+            <a href="report.html?mode=consolidated" target="_blank" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              Report
+            </a>
+          </div>
+        </div>
+      ` : '';
+
+      const authButton = `
+        <div class="px-4 py-4 border-t border-gray-100 relative ${isLoggedIn ? 'mt-auto' : ''}">
+          <a href="login.html" class="flex items-center p-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+            ${getLoginIcon(isLoggedIn)}
+            <span class="ml-3 font-medium">${isLoggedIn ? 'Logout' : 'Login'}</span>
+          </a>
+        </div>
+      `;
+
+      const themeToggleSection = `
+        <div class="px-4 py-4 border-t border-gray-100">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-700">Tema</span>
+            <div id="theme-toggle" class="theme-toggle ${currentTheme === 'dark' ? 'active' : ''}" onclick="toggleTheme()">
+              <div class="theme-toggle-slider">
+                ${currentTheme === 'dark' ? getMoonIcon() : getSunIcon()}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const sidebarContent = `
+        <div class="flex items-center h-20 px-6 border-b border-gray-100">
+          ${getLogoSvg()}
+        </div>
+
+        <nav class="mt-4 space-y-1 px-4 flex-grow">
+          ${navItems.map(item => {
+            const isActive = item.page === currentFile;
+            const href = item.page === 'index.html' ? item.page : `index.html?page=${item.page}`;
+
+            return `
+              <a href="${href}" class="flex items-center p-2 rounded-lg text-sm transition-colors duration-200 ${isActive ? 'text-white shadow-lg' : 'text-gray-700 hover:bg-gray-100'}"
+              style="${isActive ? 'background-color: ' + colors.azure + ';' : ''}"
+              >
+                <span class="ml-3 font-medium">${item.name}</span>
+              </a>
+            `;
+          }).join('')}
+        </nav>
+        
+        ${themeToggleSection}
+        ${settingsSection}
+        ${authButton}
+      `;
+      
+      document.getElementById('sidebar').innerHTML = sidebarContent;
+
+      document.addEventListener('click', (event) => {
+        const menu = document.getElementById('settings-options');
+        const button = document.querySelector('#sidebar button');
+
+        if (menu && button && !button.contains(event.target) && !menu.contains(event.target)) {
+          menu.classList.remove('active');
+        }
+      });
+    }
+
+    async function renderApp() {
+      loadTheme();
+      renderSidebar();
+      
+      // Tenta carregar dados do Excel primeiro
+      const excelLoaded = await loadExcelFromGitHub();
+      
+      // Renderiza a interface (com dados do Excel se carregado com sucesso, senão usa dados iniciais)
+      renderGeneralDataSection();
+      filterAndRenderKpis();
+      setupBarChartInteractivity();
+      setupLineChartInteractivity("Atividades da semana");
+      setupLineChartInteractivity("Atividades do 1º semestre");
+    }
+
+    // Função para recarregar dados manualmente
+    async function reloadExcelData() {
+      const loaded = await loadExcelFromGitHub();
+      if (loaded) {
+        // Recarrega os dados globais do localStorage atualizado
+        const newKpiData = loadKpiData();
+        kpiData.length = 0;
+        newKpiData.forEach(item => kpiData.push(item));
+        
+        const newChartData = loadChartData();
+        Object.assign(chartData, newChartData);
+        
+        // Re-renderiza tudo
+        renderGeneralDataSection();
+        filterAndRenderKpis();
+        
+        alert('✅ Dados recarregados com sucesso do Excel!');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', renderApp);
+  </script>
+</body>
+</html>
