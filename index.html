@@ -7,6 +7,8 @@
   <title>EAD - Dashboard Prepara</title>
   <link rel="icon" href="favicon.png" type="image/png">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Biblioteca SheetJS para ler arquivos Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     /* Transições suaves para mudança de tema */
     * {
@@ -210,13 +212,67 @@
     [data-theme="dark"] svg line {
       stroke: currentColor;
     }
+
+    /* Loading spinner */
+    .loading-spinner {
+      border: 3px solid var(--border-color);
+      border-top: 3px solid var(--azure);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
     
   </style>
 </head>
 
 <body class="bg-gray-50 font-sans">
 
-  <!-- CORREÇÃO: Removida a classe 'bg-white' do sidebar. O fundo é controlado pelo CSS customizado do #sidebar. -->
+  <!-- Loading overlay -->
+  <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+    <div class="card-base p-8 rounded-xl text-center">
+      <div class="loading-spinner mx-auto mb-4"></div>
+      <p class="text-lg font-semibold">Carregando dados do Excel...</p>
+      <p id="loading-status" class="text-sm text-gray-500 mt-2"></p>
+    </div>
+  </div>
+
+  <!-- Upload Modal -->
+  <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+    <div class="card-base p-8 rounded-xl max-w-md w-full mx-4">
+      <h3 class="text-xl font-bold mb-4">Carregar Arquivo Excel</h3>
+      <p class="text-sm text-gray-600 mb-4">Selecione um arquivo .xlsx do seu computador para testar localmente</p>
+      
+      <input 
+        type="file" 
+        id="file-input" 
+        accept=".xlsx,.xls"
+        class="w-full p-2 border border-gray-300 rounded-lg mb-4"
+      />
+      
+      <div class="flex gap-2">
+        <button 
+          onclick="uploadLocalFile()" 
+          class="flex-1 px-4 py-2 rounded-lg text-white"
+          style="background-color: var(--azure);"
+        >
+          Carregar
+        </button>
+        <button 
+          onclick="closeUploadModal()" 
+          class="flex-1 px-4 py-2 rounded-lg border border-gray-300"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="sidebar" class="border-r border-gray-200 h-screen fixed top-0 left-0 z-30 flex flex-col shadow-xl">
   </div>
 
@@ -237,13 +293,200 @@
     const DATE_STORAGE_KEY_BASE = 'lastUpdateDate';
     const AUTH_KEY = 'isLoggedIn';
     const PROGRESS_PAGE_KEY = 'progressPageId';
-    const THEME_KEY = 'theme'; // Nova chave para salvar o tema
+    const THEME_KEY = 'theme';
+
+    // URL do arquivo Excel - tenta primeiro localmente, depois do GitHub
+    const EXCEL_LOCAL_PATH = './Dados.xlsx'; // Arquivo na mesma pasta
+    const EXCEL_GITHUB_URL = 'https://raw.githubusercontent.com/fabricaderecursosdigitais/dashboard/main/Dados.xlsx';
 
     const FILTER_DEFINITIONS = {
       specialty: { title: "Especialidade", options: ["Todos", "Cardiologia", "Pediatria", "Neurologia"] },
       subspecialty: { title: "Subespecialidade", options: ["Todos", "Clínica Geral", "Emergência", "Cirurgia"] },
       module: { title: "Módulo", options: ["Todos", "Módulo A", "Módulo B", "Módulo C"] }
     };
+
+    // =================================================================
+    // FUNÇÕES DE LEITURA DO EXCEL
+    // =================================================================
+
+    async function loadExcelFromGitHub() {
+      try {
+        showLoading(true);
+        
+        // Tenta primeiro carregar localmente (mesma pasta)
+        console.log('🔄 Tentando carregar Excel localmente...');
+        console.log('Caminho local:', EXCEL_LOCAL_PATH);
+        
+        let response;
+        let source = 'local';
+        
+        try {
+          response = await fetch(EXCEL_LOCAL_PATH, {
+            method: 'GET',
+            cache: 'no-cache'
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Arquivo local não encontrado: ${response.status}`);
+          }
+          
+          console.log('✅ Arquivo local encontrado!');
+        } catch (localError) {
+          console.log('❌ Arquivo local não encontrado, tentando GitHub...');
+          console.log('URL GitHub:', EXCEL_GITHUB_URL);
+          
+          // Se falhar localmente, tenta do GitHub
+          response = await fetch(EXCEL_GITHUB_URL, {
+            method: 'GET',
+            mode: 'cors',
+            cache: 'no-cache'
+          });
+          
+          source = 'GitHub';
+          
+          if (!response.ok) {
+            throw new Error(`Erro ao buscar arquivo do GitHub: ${response.status} ${response.statusText}`);
+          }
+          
+          console.log('✅ Arquivo carregado do GitHub!');
+        }
+        
+        console.log(`📁 Fonte: ${source}`);
+        console.log('Response status:', response.status);
+        
+        // Converte para ArrayBuffer
+        const arrayBuffer = await response.arrayBuffer();
+        console.log('Arquivo carregado, tamanho:', arrayBuffer.byteLength, 'bytes');
+        
+        // Lê o arquivo Excel usando SheetJS
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        console.log('Workbook carregado, planilhas:', workbook.SheetNames);
+        
+        // Processa os dados do Excel
+        const data = processExcelData(workbook);
+        console.log('Dados processados:', data);
+        
+        // Limpa os arrays atuais
+        kpiData.length = 0;
+        
+        // Atualiza os dados globais
+        data.kpiData.forEach(item => kpiData.push(item));
+        Object.assign(chartData, data.chartData);
+        
+        // Salva no localStorage
+        localStorage.setItem(STORAGE_KEY_KPI, JSON.stringify(kpiData));
+        localStorage.setItem(CHART_STORAGE_KEY_CHART, JSON.stringify(chartData));
+        
+        // Salva a data de atualização
+        const now = new Date();
+        const dateString = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')} (${source})`;
+        localStorage.setItem(DATE_KEY, dateString);
+        
+        console.log(`✅ Dados carregados com sucesso do Excel (${source})!`);
+        console.log('Total de KPIs:', kpiData.length);
+        
+        showLoading(false);
+        return true;
+      } catch (error) {
+        console.error('❌ Erro ao carregar Excel:', error);
+        console.error('Stack:', error.stack);
+        showLoading(false);
+        
+        // Mostra mensagem mais detalhada
+        const errorMsg = `Erro ao carregar dados do Excel:\n${error.message}\n\nVerifique:\n1. Se o arquivo existe no GitHub\n2. Se a URL está correta\n3. O console do navegador (F12) para mais detalhes`;
+        alert(errorMsg);
+        return false;
+      }
+    }
+
+    function processExcelData(workbook) {
+      console.log('Processando dados do Excel...');
+      
+      // Assume que a primeira planilha contém os dados de KPI
+      const firstSheetName = workbook.SheetNames[0];
+      console.log('Processando planilha:', firstSheetName);
+      
+      const worksheet = workbook.Sheets[firstSheetName];
+      
+      // Converte a planilha para JSON
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+      console.log('Dados brutos da planilha:', jsonData);
+      console.log('Total de linhas:', jsonData.length);
+      
+      // Processa os dados de KPI (assumindo que a primeira linha é cabeçalho)
+      const kpiData = [];
+      const headers = jsonData[0];
+      console.log('Cabeçalhos:', headers);
+      
+      for (let i = 1; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        
+        // Pula linhas vazias
+        if (!row || row.length === 0 || !row[0]) {
+          console.log(`Linha ${i} vazia, pulando...`);
+          continue;
+        }
+        
+        console.log(`Processando linha ${i}:`, row);
+        
+        // Mapeia as colunas do Excel para o formato esperado
+        const current = parseInt(row[1]) || 0;
+        const total = parseInt(row[2]) || 100;
+        const percentage = row[3] ? parseInt(row[3]) : Math.round((current / total) * 100);
+        
+        const kpiItem = {
+          id: i,
+          title: String(row[0] || `Item ${i}`),
+          current: current,
+          total: total,
+          percentage: percentage,
+          specialty: String(row[4] || "Todos"),
+          subspecialty: String(row[5] || "Todos"),
+          module: String(row[6] || "Todos")
+        };
+        
+        console.log(`KPI criado:`, kpiItem);
+        kpiData.push(kpiItem);
+      }
+      
+      console.log('Total de KPIs processados:', kpiData.length);
+      
+      // Processa dados de gráficos (se houver outras planilhas)
+      let chartData = JSON.parse(JSON.stringify(initialChartData)); // Deep clone
+      
+      // Verifica se há planilha de gráficos
+      if (workbook.SheetNames.length > 1) {
+        console.log('Processando segunda planilha para gráficos...');
+        const chartSheetName = workbook.SheetNames[1];
+        const chartWorksheet = workbook.Sheets[chartSheetName];
+        const chartJsonData = XLSX.utils.sheet_to_json(chartWorksheet, { header: 1 });
+        
+        console.log('Dados de gráficos:', chartJsonData);
+        
+        // Processa dados mensais (assumindo formato específico)
+        if (chartJsonData.length > 1) {
+          const monthlyValues = [];
+          for (let i = 1; i <= 12 && i < chartJsonData.length; i++) {
+            const value = parseInt(chartJsonData[i][1]) || 0;
+            monthlyValues.push(value);
+          }
+          
+          if (monthlyValues.length > 0) {
+            chartData.monthlyLimits.values = monthlyValues;
+            console.log('Valores mensais atualizados:', monthlyValues);
+          }
+        }
+      }
+      
+      return { kpiData, chartData };
+    }
+
+    function showLoading(show) {
+      const overlay = document.getElementById('loading-overlay');
+      if (overlay) {
+        overlay.style.display = show ? 'flex' : 'none';
+      }
+    }
 
     // =================================================================
     // FUNÇÕES DE TEMA
@@ -264,7 +507,6 @@
       // Atualiza o visual do toggle
       const toggle = document.getElementById('theme-toggle');
       if (toggle) {
-        // Atualiza o slider e o ícone
         toggle.classList.toggle('active', newTheme === 'dark');
         const slider = toggle.querySelector('.theme-toggle-slider');
         if (slider) {
@@ -572,6 +814,20 @@
           <div class="flex flex-col md:flex-row md:items-center justify-between">
             <div class="mb-4 md:mb-0">
               <p class="text-xs text-gray-500 mt-1">Atualizado em: ${displayedDate}</p>
+              <button 
+                onclick="reloadExcelData()" 
+                class="mt-2 px-3 py-1 text-xs rounded-lg transition-colors mr-2"
+                style="background-color: ${colors.azure}; color: white;"
+              >
+                🔄 Recarregar do Excel
+              </button>
+              <button 
+                onclick="openUploadModal()" 
+                class="mt-2 px-3 py-1 text-xs rounded-lg transition-colors"
+                style="background-color: ${colors.violetDark}; color: white;"
+              >
+                📁 Carregar Arquivo Local
+              </button>
             </div>
             <div class="flex flex-wrap gap-3 items-center">
               ${dropdownsHtml}
@@ -595,7 +851,6 @@
       });
 
       kpiContainer.innerHTML = filteredKpis.map(metric => {
-        // CORREÇÃO: Removida a classe 'bg-white'
         return `
           <div class="p-4 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
             <div class="flex items-center justify-between mb-4">
@@ -671,7 +926,6 @@
         `;
       }).join('');
 
-      // CORREÇÃO: Removida a classe 'bg-white'
       return `
         <div class="p-6 rounded-xl shadow-sm card-base h-96 flex flex-col hover:shadow-lg">
           <h3 class="text-lg font-semibold mb-4">${chartData.titleMonthlyLimits} (Total: ${totalSum})</h3>
@@ -777,7 +1031,6 @@
       let controlsHtml = ''; 
       const displayLabels = isSemestre ? ((data.semestreRef === '2') ? ['Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'] : ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun']) : labels;
 
-      // CORREÇÃO: Removida a classe 'bg-white'
       return `
         <div class="p-6 rounded-xl shadow-sm card-base h-96 flex flex-col hover:shadow-lg">
           <h3 class="text-lg font-semibold mb-4">${title} (Total: ${totalSum})</h3>
@@ -804,7 +1057,6 @@
         return '';
       }
       
-      // Use as cores do tema para o texto
       const colors = getThemeColors();
 
       const detailedData = chartData.detailedProgress;
@@ -821,7 +1073,6 @@
       }).join('');
 
       const statusListCard1 = productionMetrics.map(metric => {
-        // CORREÇÃO: Usar a variável CSS global --text-primary (herdada do card-base) em vez de cor fixa (#333333)
         return `
           <div class="flex items-center space-x-1">
             <span class="h-2 w-2 rounded-full" style="background-color: ${metric.color};"></span>
@@ -840,7 +1091,6 @@
       
       const statusListCard2 = reviewMetrics.map(metric => {
         const percent = totalReview > 0 ? ((metric.value / totalReview) * 100).toFixed(2) : 0;
-        // CORREÇÃO: Usar a variável CSS global --text-primary (herdada do card-base) em vez de cor fixa (#333333)
         return `
           <div class="flex flex-col">
             <span>${metric.label}</span>
@@ -851,7 +1101,6 @@
 
       return `
         <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <!-- CORREÇÃO: Removida a classe 'bg-white' -->
           <div class="p-6 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
             <h3 class="text-lg font-semibold mb-4">${titleCard1} (Total: ${totalProduction})</h3>
             <div class="flex w-full h-3 rounded-full bg-gray-200 overflow-hidden mb-4">
@@ -862,7 +1111,6 @@
             </div>
           </div>
 
-          <!-- CORREÇÃO: Removida a classe 'bg-white' -->
           <div class="p-6 rounded-xl shadow-sm border border-gray-100 card-base hover:shadow-lg">
             <h3 class="text-lg font-semibold mb-4">${titleCard2} (Total: ${totalReview})</h3>
             <div class="flex w-full h-3 rounded-full bg-gray-200 overflow-hidden">
@@ -892,8 +1140,7 @@
       const generalDataHtml = `
         ${detailedCardsHtml}
         
-        <section class="mb-4 ${detailedCardsHtml ? 'mt-8' : ''}">
-          <!-- CORREÇÃO: Removida a classe 'bg-white' -->
+        <section class="mb-4 ${detailedCartsHtml ? 'mt-8' : ''}">
           <div 
             id="toggle-header"
             class="p-4 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 card-base hover:shadow-lg transition-colors"
@@ -970,7 +1217,6 @@
             <span class="ml-3 font-medium">Configurações</span>
           </button>
           
-          <!-- CORREÇÃO: Removida a classe 'bg-white' -->
           <div id="settings-options" class="menu-options absolute bottom-14 left-0 w-full border border-gray-200 rounded-lg shadow-lg z-50 py-1">
             <a href="editor.html?page=${currentFile}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
               Ir para o editor
@@ -1008,7 +1254,6 @@
       `;
 
       const sidebarContent = `
-        <!-- CORREÇÃO: Removida a classe 'bg-white' do container do menu de opções -->
         <div class="flex items-center h-20 px-6 border-b border-gray-100">
           ${getLogoSvg()}
         </div>
@@ -1045,9 +1290,14 @@
       });
     }
 
-    function renderApp() {
+    async function renderApp() {
       loadTheme();
       renderSidebar();
+      
+      // Tenta carregar dados do Excel primeiro
+      const excelLoaded = await loadExcelFromGitHub();
+      
+      // Renderiza a interface (com dados do Excel se carregado com sucesso, senão usa dados iniciais)
       renderGeneralDataSection();
       filterAndRenderKpis();
       setupBarChartInteractivity();
@@ -1055,7 +1305,103 @@
       setupLineChartInteractivity("Atividades do 1º semestre");
     }
 
+    // Função para recarregar dados manualmente
+    async function reloadExcelData() {
+      const loaded = await loadExcelFromGitHub();
+      if (loaded) {
+        // Recarrega os dados globais do localStorage atualizado
+        const newKpiData = loadKpiData();
+        kpiData.length = 0;
+        newKpiData.forEach(item => kpiData.push(item));
+        
+        const newChartData = loadChartData();
+        Object.assign(chartData, newChartData);
+        
+        // Re-renderiza tudo
+        renderGeneralDataSection();
+        filterAndRenderKpis();
+        
+        alert('✅ Dados recarregados com sucesso do Excel!');
+      }
+    }
+
+    // =================================================================
+    // FUNÇÕES DE UPLOAD LOCAL
+    // =================================================================
+
+    function openUploadModal() {
+      const modal = document.getElementById('upload-modal');
+      if (modal) {
+        modal.style.display = 'flex';
+      }
+    }
+
+    function closeUploadModal() {
+      const modal = document.getElementById('upload-modal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    }
+
+    async function uploadLocalFile() {
+      const fileInput = document.getElementById('file-input');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        alert('Por favor, selecione um arquivo primeiro!');
+        return;
+      }
+      
+      console.log('Arquivo selecionado:', file.name);
+      closeUploadModal();
+      showLoading(true);
+      
+      try {
+        // Lê o arquivo como ArrayBuffer
+        const arrayBuffer = await file.arrayBuffer();
+        console.log('Arquivo lido, tamanho:', arrayBuffer.byteLength, 'bytes');
+        
+        // Processa o Excel
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        console.log('Workbook carregado, planilhas:', workbook.SheetNames);
+        
+        // Processa os dados
+        const data = processExcelData(workbook);
+        console.log('Dados processados:', data);
+        
+        // Limpa e atualiza
+        kpiData.length = 0;
+        data.kpiData.forEach(item => kpiData.push(item));
+        Object.assign(chartData, data.chartData);
+        
+        // Salva no localStorage
+        localStorage.setItem(STORAGE_KEY_KPI, JSON.stringify(kpiData));
+        localStorage.setItem(CHART_STORAGE_KEY_CHART, JSON.stringify(chartData));
+        
+        // Atualiza data
+        const now = new Date();
+        const dateString = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')} (Local)`;
+        localStorage.setItem(DATE_KEY, dateString);
+        
+        // Re-renderiza
+        renderGeneralDataSection();
+        filterAndRenderKpis();
+        
+        showLoading(false);
+        alert(`✅ Arquivo "${file.name}" carregado com sucesso!\nTotal de KPIs: ${kpiData.length}`);
+        
+        // Limpa o input
+        fileInput.value = '';
+        
+      } catch (error) {
+        console.error('Erro ao processar arquivo:', error);
+        showLoading(false);
+        alert(`Erro ao processar arquivo:\n${error.message}\n\nVerifique se o arquivo está no formato correto.`);
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', renderApp);
   </script>
 </body>
 </html>
+
